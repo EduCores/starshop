@@ -210,7 +210,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 </ul>
               </div>
             </div>
-            <div className="relative z-10 py-4 px-4 text-center text-xs text-zinc-400">
+            <div className="relative z-10 bg-black py-4 px-4 text-center text-xs text-zinc-400">
               Pagos seguros: WebPay • Transferencia • Factura B2B • Certificación SEC disponible en productos
               seleccionados
             </div>
