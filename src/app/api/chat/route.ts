@@ -384,7 +384,12 @@ Responde con 2-3 preguntas de calificación: uso (hogar/industrial), presupuesto
       return NextResponse.json({ text: textFromTool, toolCalls, debug: { model, topIds: top.map(t=>t.p.id) } });
     }
 
-    const text = messageRes?.content || data.choices?.[0]?.text || "Sin respuesta del LLM.";
+    const firstNavFinal = toolCalls.find(t => t.toolName === "navigateTo")?.args?.path ?? "";
+    const text = messageRes?.content || data.choices?.[0]?.text || (firstNavFinal
+      ? (firstNavFinal.startsWith("/busqueda")
+        ? `¡Buena búsqueda! Te abrí la ventana de resultados con todos los productos que coinciden con "${message}". ¿Quieres que filtre por precio, SEC o marca?`
+        : `Te llevo a ${firstNavFinal} — echa un vistazo y dime si quieres ver más opciones o filtrar.`)
+      : "No pude generar una respuesta ahora mismo, ¿me lo repites?");
 
     // Fallback heurístico ya cubierto arriba (navegación automática), pero por si LLM no usó tools
     // toolCalls ya contiene navegación automática si corresponde
