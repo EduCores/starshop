@@ -83,7 +83,7 @@ export function FloatingButtons() {
       const calls = data.toolCalls ?? [];
       const nav = calls.find((t: any) => t.toolName === "navigateTo" || t.name === "navigateTo");
       const chk = calls.find((t: any) => t.toolName === "checkout" || t.name === "checkout");
-      const navigateTo = chk?.args?.checkoutUrl ?? chk?.result?.checkoutUrl ?? nav?.args?.path ?? nav?.input?.path ?? nav?.result?.navigateTo;
+      const navigateTo = chk?.args?.checkoutUrl ?? chk?.result?.checkoutUrl ?? nav?.output?.navigateTo ?? nav?.result?.navigateTo ?? nav?.args?.path ?? nav?.input?.path;
       if (data.text) return { text: data.text, navigateTo };
       if (data.error) return { text: `Error ACS: ${data.error}` };
       return { text: "Sin respuesta del agente. Verificá OPENROUTER_API_KEY en ACS." };
