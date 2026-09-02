@@ -85,6 +85,7 @@ export function FloatingButtons() {
       const chk = calls.find((t: any) => t.toolName === "checkout" || t.name === "checkout");
       const navigateTo = chk?.args?.checkoutUrl ?? chk?.result?.checkoutUrl ?? nav?.output?.navigateTo ?? nav?.result?.navigateTo ?? nav?.args?.path ?? nav?.input?.path;
       if (data.text) return { text: data.text, navigateTo };
+      if (navigateTo) return { text: "Te llevo a la tienda para que veas los resultados.", navigateTo };
       if (data.error) return { text: `Error ACS: ${data.error}` };
       return { text: "Sin respuesta del agente. Verificá OPENROUTER_API_KEY en ACS." };
     } catch {
