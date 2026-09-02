@@ -32,7 +32,11 @@ export function FloatingButtons() {
     // SKU exacto (producto usa /producto/[id] con p.id, no slug)
     const bySku = products.find((p) => p.sku.toLowerCase() === t || p.sku.toLowerCase().replace(/-/g, "") === t.replace(/-/g, ""));
     if (bySku) return `/producto/${bySku.id}`;
-    if (t.length >= 5) {
+    // Match por nombre solo si la consulta es específica (2+ palabras significativas o texto largo).
+    // Un término genérico de 1 palabra (ej: "taladro") debe ir a /busqueda?q= (ventana de resultados),
+    // no al primer producto cuyo nombre lo contenga.
+    const meaningful = t.split(" ").filter((w) => w.length > 3);
+    if (t.length >= 5 && (meaningful.length >= 2 || t.length >= 12)) {
       const byName = products.find((p) => p.name.toLowerCase().includes(t) || t.includes(p.name.toLowerCase().substring(0, 20)));
       if (byName) return `/producto/${byName.id}`;
       const words = t.split(" ").filter((w) => w.length > 3);
@@ -48,13 +52,11 @@ export function FloatingButtons() {
   };
 
   const getCategoryPath = (input: string): string | null => {
-    const t = input.toLowerCase();
-    if (t.includes("proyector") || t.includes("proyectores")) return "/categoria/iluminacion-led-neon?search=proyector";
-    if (t.includes("taladro") || t.includes("taladros") || t.includes("sierra") || t.includes("herramienta")) return "/categoria/herramientas-maquinarias?search=taladro";
-    if (t.includes("multimetro") || t.includes("pinza") || t.includes("pirometro") || t.includes("cámara term")) return "/categoria/instrumentos-medicion?search=multimetro";
-    if (t.includes("tubo") || t.includes("uv") || t.includes("germicida")) return "/categoria/tubos-lamparas-especiales?search=uv";
-    if (t.includes("pila") || t.includes("bateria") || t.includes("18650")) return "/categoria/pilas-baterias-cargadores?search=bateria";
-    if (t.includes("panel") || t.includes("led") || t.includes("neon") || t.includes("iluminaci")) return "/categoria/iluminacion-led-neon?search=led";
+    const t = input.toLowerCase().trim();
+    // Búsqueda genérica (<=3 palabras, ej: "taladro"): lleva a la ventana de resultados global
+    // /busqueda?q= donde se muestran TODOS los productos que coinciden en el catálogo completo.
+    const words = t.split(/\s+/).filter(Boolean);
+    if (t.length >= 3 && words.length <= 3) return `/busqueda?q=${encodeURIComponent(t)}`;
     return null;
   };
 
@@ -175,7 +177,7 @@ export function FloatingButtons() {
     const wantsToSee = /ver|mostrar|llevame|muestrame|quiero ver|busco|ir/i.test(t);
     if (auto && (wantsToSee || t.length >= 5)) {
       const isProduct = auto.path.startsWith("/producto/");
-      const friendly = isProduct ? `¡Perfecto! Te llevo a "${auto.label}" — abriendo la ficha...` : `¡Vamos! Te llevo a ${t} — abriendo la categoría...`;
+      const friendly = isProduct ? `¡Perfecto! Te llevo a "${auto.label}" — abriendo la ficha...` : `¡Vamos! Busco "${t}" en todo el catálogo — abriendo los resultados...`;
       setAgentMessages((m) => [...m, { role: "agent", text: friendly }]);
       setAgentTyping(false);
       setTimeout(() => { window.location.href = auto.path; }, 900);

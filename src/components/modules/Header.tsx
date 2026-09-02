@@ -1,6 +1,7 @@
 "use client";
 import { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { superCategories, products } from "@/lib/mock-data";
 import { useCart } from "@/store/cart";
 import { useIsMounted } from "@/hooks/use-is-mounted";
@@ -89,6 +90,15 @@ export function Header() {
     return products.filter((p) => p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q)).slice(0, 6);
   }, [search]);
 
+  const router = useRouter();
+  // Enter en el buscador -> búsqueda genérica global (/busqueda?q=)
+  const goToSearch = () => {
+    const q = search.trim();
+    if (!q) return;
+    setShowAutocomplete(false);
+    router.push(`/busqueda?q=${encodeURIComponent(q)}`);
+  };
+
   // Mega menú: cierre retrasado para que el usuario alcance el panel sin que desaparezca
   const megaCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const openMega = () => {
@@ -151,6 +161,7 @@ export function Header() {
                     }}
                     onFocus={() => setShowAutocomplete(true)}
                     onBlur={() => setTimeout(() => setShowAutocomplete(false), 200)}
+                    onKeyDown={(e) => e.key === "Enter" && goToSearch()}
                     placeholder="Buscar herramientas, LED, instrumentos..."
                     className="h-10 rounded-l-md rounded-r-none bg-white text-black placeholder:text-zinc-500 border-0 focus-visible:ring-2 focus-visible:ring-[#F90] text-sm flex-1"
                   />
@@ -178,6 +189,15 @@ export function Header() {
                         <div className="text-sm font-bold text-[#6b7280] dark:text-[#f9fafb]">{formatCLP(p.price)}</div>
                       </Link>
                     ))}
+                    {search.trim() && (
+                      <Link
+                        href={`/busqueda?q=${encodeURIComponent(search.trim())}`}
+                        onClick={() => setShowAutocomplete(false)}
+                        className="block p-2.5 text-center text-xs font-semibold text-[#FF3B30] hover:bg-zinc-50 dark:hover:bg-zinc-800"
+                      >
+                        Ver todos los resultados para &quot;{search.trim()}&quot;
+                      </Link>
+                    )}
                   </div>
                 )}
               </div>
@@ -323,6 +343,7 @@ export function Header() {
                 }}
                 onFocus={() => setShowAutocomplete(true)}
                 onBlur={() => setTimeout(() => setShowAutocomplete(false), 200)}
+                onKeyDown={(e) => e.key === "Enter" && goToSearch()}
                 placeholder="Buscar herramientas, LED, instrumentos..."
                 className="h-10 rounded-none md:rounded-none rounded-l-md md:rounded-l-none rounded-r-none bg-white text-black placeholder:text-zinc-500 border-0 focus-visible:ring-2 focus-visible:ring-[#F90] text-sm"
               />
@@ -344,8 +365,15 @@ export function Header() {
                       <div className="text-sm font-bold text-[#6b7280] dark:text-[#f9fafb]">{formatCLP(p.price)}</div>
                     </Link>
                   ))}
-                  <div className="p-2 text-center">
-                    <span className="text-xs text-zinc-500 dark:text-zinc-400">{filteredProducts.length} resultados • Presiona Enter para ver todos</span>
+                  <div className="p-2 text-center border-t border-zinc-200 dark:border-zinc-700">
+                    <span className="text-xs text-zinc-500 dark:text-zinc-400 block mb-1">{filteredProducts.length} resultados</span>
+                    <Link
+                      href={`/busqueda?q=${encodeURIComponent(search.trim())}`}
+                      onClick={() => setShowAutocomplete(false)}
+                      className="text-xs font-semibold text-[#FF3B30] hover:underline"
+                    >
+                      Ver todos los resultados para &quot;{search.trim()}&quot;
+                    </Link>
                   </div>
                 </div>
               )}
@@ -465,6 +493,7 @@ export function Header() {
                 }}
                 onFocus={() => setShowAutocomplete(true)}
                 onBlur={() => setTimeout(() => setShowAutocomplete(false), 200)}
+                onKeyDown={(e) => e.key === "Enter" && goToSearch()}
                 placeholder="Buscar"
                 className="h-10 rounded-none rounded-l-none rounded-r-none bg-white text-black placeholder:text-zinc-500 border-0 focus-visible:ring-2 focus-visible:ring-[#F90] text-sm"
               />
@@ -485,6 +514,15 @@ export function Header() {
                       <div className="text-sm font-bold text-[#6b7280] dark:text-[#f9fafb]">{formatCLP(p.price)}</div>
                     </Link>
                   ))}
+                  {search.trim() && (
+                    <Link
+                      href={`/busqueda?q=${encodeURIComponent(search.trim())}`}
+                      onClick={() => setShowAutocomplete(false)}
+                      className="block p-2.5 text-center text-xs font-semibold text-[#FF3B30] hover:bg-zinc-50 dark:hover:bg-zinc-800 border-t border-zinc-200 dark:border-zinc-700"
+                    >
+                      Ver todos los resultados para &quot;{search.trim()}&quot;
+                    </Link>
+                  )}
                 </div>
               )}
             </div>

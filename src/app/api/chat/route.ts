@@ -51,16 +51,21 @@ function productText(p:any): string {
   return `${p.name} ${p.shortDescription} ${p.description} ${p.brand} ${catMap[p.categoryId]} ${p.subcategory} ${(p.tags||[]).join(" ")} ${Object.entries(p.specs||{}).map(([k,v])=>`${k} ${v}`).join(" ")}`.slice(0,8000);
 }
 
+// Normaliza: minúsculas y sin acentos (para que "amperimetro" matchee "Amperímetro")
+function normalizeAccents(s: string): string {
+  return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
 // --- Retrieval simple (keywords + filtros) - mismo que scripts/probar-agente.mjs ---
 function scoreProduct(p: any, query: string) {
-  const q = query.toLowerCase();
+  const q = normalizeAccents(query);
   const tokens = q.split(/\s+/).filter(Boolean);
   let score = 0;
-  const haystack = [p.name, p.description, p.shortDescription, p.brand, catMap[p.categoryId], p.subcategory, (p.tags||[]).join(" "), Object.values(p.specs||{}).join(" ")].join(" ").toLowerCase();
+  const haystack = normalizeAccents([p.name, p.description, p.shortDescription, p.brand, catMap[p.categoryId], p.subcategory, (p.tags||[]).join(" "), Object.values(p.specs||{}).join(" ")].join(" "));
   for (const t of tokens) {
     if (haystack.includes(t)) score += 2;
-    if (String(p.name).toLowerCase().includes(t)) score += 3;
-    if ((p.tags||[]).join(" ").toLowerCase().includes(t)) score += 2;
+    if (normalizeAccents(String(p.name)).includes(t)) score += 3;
+    if (normalizeAccents((p.tags||[]).join(" ")).includes(t)) score += 2;
   }
   if (q.includes("sec") && p.secCertified) score += 5;
   if (q.includes("bestseller") && p.isBestSeller) score += 4;
@@ -148,32 +153,53 @@ export async function POST(req: NextRequest) {
     // 2) Si es match específico de producto -> navega a /producto/[slug] automáticamente
     const toolCalls: any[] = [];
     const qLower = message.toLowerCase().trim();
+    const qNorm = normalizeAccents(qLower);
+    // SKU exacto (con o sin guiones) -> ficha del producto directo
+    const skuClean = qNorm.replace(/[\s\-]/g, "");
+    const skuExact = products.find((p) => normalizeAccents(p.sku).replace(/-/g, "") === skuClean);
     // Detecta si la query es genérica de categoría (ej: "proyectores", "cintas led", "multimetros")
     let categoryNav: string | null = null;
+    let categoryIsSuper = false; // true si matchea el nombre de la categoría madre (ej: "iluminación"), false si es subcategoría (ej: "taladros")
     for (const cat of superCategories) {
       const catNames = [cat.name.toLowerCase(), cat.slug.toLowerCase()];
       const subNames = cat.subcategories.map(s => [s.name.toLowerCase(), s.slug.toLowerCase()]).flat();
-      const allNames = [...catNames, ...subNames];
-      for (const n of allNames) {
-        // match palabra clave: si query contiene o es contenida por nombre de categoría/sub
-        const base = n.replace(/s$/,""); // singulariza simple
-        if (qLower === n || qLower === base || (qLower.length <= 20 && (n.includes(qLower) || qLower.includes(base))) ) {
-          // Evita falsos positivos muy cortos
-          if (qLower.length >= 4) {
-            categoryNav = cat.slug;
-            break;
-          }
+      const matchesName = (n: string) => {
+        const n2 = normalizeAccents(n);
+        const base = n2.replace(/s$/,""); // singulariza simple
+        return qNorm === n2 || qNorm === base || (qNorm.length <= 20 && (n2.includes(qNorm) || qNorm.includes(base)));
+      };
+      for (const n of catNames) {
+        if (matchesName(n) && qNorm.length >= 4) {
+          categoryNav = cat.slug;
+          categoryIsSuper = true;
+          break;
+        }
+      }
+      if (categoryNav) break;
+      for (const n of subNames) {
+        if (matchesName(n) && qNorm.length >= 4) {
+          categoryNav = cat.slug;
+          categoryIsSuper = false;
+          break;
         }
       }
       if (categoryNav) break;
     }
-    // Si es genérica y tiene pocas palabras, prioriza navegación a categoría
-    const isGenericCategory = categoryNav && qLower.split(/\s+/).length <= 3 && (!best || scoreProduct(best, message) < 8);
-    if (isGenericCategory) {
+    // Solo navega a /categoria/[slug] si el término es la categoría madre (ej: "iluminación").
+    // Si es un término tipo producto/subcategoría (ej: "taladro"), cae al /busqueda?q= de abajo:
+    // así el agente lleva a la ventana con TODOS los productos que coinciden.
+    const isGenericCategory = categoryNav && categoryIsSuper && qLower.split(/\s+/).length <= 3 && (!best || scoreProduct(best, message) < 8);
+    if (skuExact) {
+      toolCalls.push({ toolName: "navigateTo", args: { path: `/producto/${skuExact.id}` } });
+    } else if (isGenericCategory) {
       toolCalls.push({ toolName: "navigateTo", args: { path: `/categoria/${categoryNav}` } });
-    } else if (best && scoreProduct(best, message) >= 6) {
-      // Match específico -> navega automáticamente a producto (sin esperar "ver")
+    } else if (best && scoreProduct(best, message) >= 6 && qLower.split(/\s+/).length >= 3) {
+      // Match específico de 3+ palabras (ej: "taladro percutor 20v") -> navega al producto
       toolCalls.push({ toolName: "navigateTo", args: { path: `/producto/${best.slug}` } });
+    } else if (qLower.length >= 4 && !/^(hola|buenas|buenos|hey|chao|adios|gracias|ayuda|qué tienes|que tienes|qué tienen|que tienen)\b/.test(qLower)) {
+      // Término genérico (ej: "taladro", "amperímetro", "taladros") -> ventana de resultados
+      // global /busqueda?q= con TODOS los productos que coinciden en el catálogo
+      toolCalls.push({ toolName: "navigateTo", args: { path: `/busqueda?q=${encodeURIComponent(message.trim())}` } });
     }
 
     // Si no hay keys de LLM, responde en modo RAG mock (sin gastar tokens) - útil para probar Excel sin OpenRouter
@@ -188,7 +214,7 @@ export async function POST(req: NextRequest) {
       if (isVague) {
         const cats = superCategories.slice(0,5).map(c=>`• **${c.name}** (${c.slug}) — ${c.description}`).join("\n");
         const guide = `¡Hola! Soy Star ⭐ ¿Qué categoría buscas hoy?\n\n${cats}\n\nCuéntame: ¿uso hogar o industrial? ¿presupuesto aprox? ¿necesitas SEC o precio mayorista? Con eso te muestro el match exacto y te llevo directo al producto.`;
-        return NextResponse.json({ text: guide, debug: { mode: "mock-rag-guide", topIds: [] } });
+        return NextResponse.json({ text: guide, toolCalls: toolCalls.length ? toolCalls : undefined, debug: { mode: "mock-rag-guide", topIds: [] } });
       }
       // Genérica -> guía a categoría con navegación automática
       if (isGenericCategory) {
@@ -196,6 +222,13 @@ export async function POST(req: NextRequest) {
         const subs = cat.subcategories.slice(0,4).map(s=>`• ${s.name} (${s.count} productos)`).join("\n");
         const catText = `¡Genial! Buscas **${cat.name}** 👉 te llevo a la categoría completa.\n\n${cat.description}\n\nSubcategorías destacadas:\n${subs}\n\nYa te abrí **/categoria/${cat.slug}** para que explores. ¿Quieres que filtre por precio, SEC o marca dentro de esa categoría?`;
         return NextResponse.json({ text: catText, toolCalls, debug: { mode: "mock-rag-category", topIds: [] } });
+      }
+      // Búsqueda genérica -> texto coherente con la navegación a /busqueda?q=
+      const searchNav = toolCalls.find(t => typeof t.args?.path === "string" && t.args.path.startsWith("/busqueda"));
+      if (searchNav) {
+        const topText = top.slice(0,3).map(({p})=>`• ${p.name} — $${p.price.toLocaleString("es-CL")} ${p.secCertified?"SEC✅":""} → /producto/${p.slug}`).join("\n");
+        const searchText = `¡Buena búsqueda! Te abrí la ventana de resultados con **todos** los productos que coinciden con "${message}" en el catálogo completo 🔎\n\nTop matches:\n${topText || "Revisa la ventana de resultados."}\n\n¿Quieres que filtre por precio, SEC o marca?`;
+        return NextResponse.json({ text: searchText, toolCalls, debug: { mode: "mock-rag-search", topIds: top.map(t=>t.p.id) } });
       }
       // Match específico -> persuasivo + assertivo + navegación automática
       const p = best!;
@@ -221,9 +254,9 @@ Responde con 2-3 preguntas de calificación: uso (hogar/industrial), presupuesto
 
 2) CUANDO HAY MATCH ESPECÍFICO (score alto y 1 producto claro): sé persuasivo, destaca beneficios, precio oferta vs original, SEC, garantía, stock y CTA a comprar. Usa specs del contexto. Ejemplo: "Este Proyector 200W IP66 te ahorra 34% ($45.990) y está certificado SEC — ideal para tu galpón. ¿Lo llevamos?" Y EJECUTA AUTOMÁTICAMENTE navigateTo a /producto/[slug] del producto final.
 
-3) BÚSQUEDA GENÉRICA: Si el cliente dice "proyectores", "cintas led", "multímetros" (nombre de categoría/subcategoría), NO muestres 1 producto. EJECUTA navigateTo a /categoria/[slug] de esa categoría y ofrece filtrar dentro.
+3) BÚSQUEDA GENÉRICA: Si el cliente dice "proyectores", "cintas led", "multímetros" (nombre de categoría/subcategoría), NO muestres 1 producto. EJECUTA navigateTo a /categoria/[slug] de esa categoría y ofrece filtrar dentro. Si el término genérico NO calza con una categoría exacta (ej: "taladro", "amperímetro", "taladro percutor 20V"), EJECUTA navigateTo a /busqueda?q=[término]: abre una ventana con TODOS los productos que coinciden en el catálogo.
 
-4) CAPACIDADES: puedes CAMBIAR DE PÁGINA (navigateTo), BUSCAR EN VIVO (searchProducts) y FILTRAR por categoría/precio/SEC. Úsalas SIEMPRE con tools cuando corresponda. Si detectas match específico, navigateTo a producto; si es genérico, navigateTo a categoría.
+4) CAPACIDADES: puedes CAMBIAR DE PÁGINA (navigateTo), BUSCAR EN VIVO (searchProducts) y FILTRAR por categoría/precio/SEC. Úsalas SIEMPRE con tools cuando corresponda. Si detectas match específico, navigateTo a producto; si es genérico de categoría, navigateTo a categoría; si es búsqueda libre, navigateTo a /busqueda?q=[término].
 
 5) Usa SOLO el contexto Excel provisto. No inventes SKU/precio/stock. Si nada calza, di que no está y ofrece alternativa de la misma categoría. Responde siempre en español de Chile, conciso, con SKU, precio CLP, SEC y URL /producto/[slug] o /categoria/[slug].`;
 
@@ -303,7 +336,21 @@ Responde con 2-3 preguntas de calificación: uso (hogar/industrial), presupuesto
         let args: any = {};
         try { args = JSON.parse(tc.function?.arguments || tc.args || "{}"); } catch { args = tc.function?.arguments || {}; }
         if (name === "navigateTo" && args.path) {
-          toolCalls.push({ toolName: "navigateTo", args });
+          const p: string = String(args.path);
+          // Sanitiza paths generados por el LLM: solo rutas válidas de la app
+          const isProducto = /^\/producto\/[a-z0-9\-]+\/?$/i.test(p);
+          const isCategoria = /^\/categoria\/[a-z0-9\-]+\/?$/i.test(p); // un solo slug (sin subcategorías)
+          const isBusqueda = /^\/busqueda(\?|$)/.test(p);
+          // Evita duplicar la decisión de navegación (la heurística ya pudo navegar a /busqueda o /producto)
+          const yaHayNav = toolCalls.some(t => t.toolName === "navigateTo");
+          if (!yaHayNav) {
+            if (isProducto || isCategoria || isBusqueda) {
+              toolCalls.push({ toolName: "navigateTo", args });
+            } else {
+              // Path malformado (ej: /categoria/x/subcategoria) -> ventana de resultados global
+              toolCalls.push({ toolName: "navigateTo", args: { path: `/busqueda?q=${encodeURIComponent(message.trim())}` } });
+            }
+          }
         } else if (name === "searchProducts" && args.query) {
           const secOnly = !!args.secOnly;
           const filtered = products.filter(p => {
@@ -317,9 +364,11 @@ Responde con 2-3 preguntas de calificación: uso (hogar/industrial), presupuesto
           // Si el LLM pidió búsqueda, le devolvemos contexto y que genere texto final
           // Por simplicidad, inyectamos el resultado como texto y también como toolCall para el front
           toolCalls.push({ toolName: "searchProducts", args, result: scored.map(s=>s.p.slug) });
-          // Si hay un best claro tras búsqueda, también navega
+          // Si hay un best claro tras búsqueda, navega al producto; si no, a la ventana de resultados global
           if (scored[0] && scored[0].s >=6) {
             toolCalls.push({ toolName: "navigateTo", args: { path: `/producto/${scored[0].p.slug}` } });
+          } else {
+            toolCalls.push({ toolName: "navigateTo", args: { path: `/busqueda?q=${encodeURIComponent(args.query)}` } });
           }
           // Si no hay tool de navegación previa, dejamos que el LLM genere texto con estos resultados en siguiente turno;
           // como fallback, retornamos directamente
@@ -328,7 +377,10 @@ Responde con 2-3 preguntas de calificación: uso (hogar/industrial), presupuesto
         }
       }
       // Si solo fue navigateTo, devolvemos el texto del LLM + tool
-      const textFromTool = messageRes?.content || `Te llevo a ${toolCalls[0]?.args?.path} — es el match perfecto para "${message}". ¿Confirmamos talla/cantidad?`;
+      const firstNav = toolCalls.find(t => t.toolName === "navigateTo")?.args?.path ?? "";
+      const textFromTool = messageRes?.content || (firstNav.startsWith("/busqueda")
+        ? `¡Buena búsqueda! Te abrí la ventana de resultados con todos los productos que coinciden con "${message}". ¿Quieres que filtre por precio, SEC o marca?`
+        : `Te llevo a ${firstNav} — es el match perfecto para "${message}". ¿Confirmamos cantidad y despacho?`);
       return NextResponse.json({ text: textFromTool, toolCalls, debug: { model, topIds: top.map(t=>t.p.id) } });
     }
 
