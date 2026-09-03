@@ -56,6 +56,13 @@ export function FloatingButtons() {
     // Búsqueda genérica (<=3 palabras, ej: "taladro"): lleva a la ventana de resultados global
     // /busqueda?q= donde se muestran TODOS los productos que coinciden en el catálogo completo.
     const words = t.split(/\s+/).filter(Boolean);
+    // Small talk / cortesías: no navegar; el agente debe conversar y calificar
+    if (/^(hola|hola!|hey|oye|buenas|buenos|buenas tardes|buenos dias|gracias|muchas gracias|chao|adios|hasta luego|ok|dale|perfecto|entiendo|bien|me ayudas|puedes ayudarme|que tienes|que tienen)\b/.test(t)) return null;
+    // Colecciones especiales: ofertas y destacados -> ventana con filtro especial
+    if (/(ofertas?|descuentos?|promos?|promociones?|remates?|cyber|sale|liquidacion)/.test(t)) return "/busqueda?q=ofertas";
+    if (/(destacados?|recomendados?|featured|populares|mas vendidos|mejores vendidos|bestsellers?|top ventas)/.test(t)) return "/busqueda?q=destacados";
+    // Búsqueda genérica (<=3 palabras, ej: "taladro"): lleva a la ventana de resultados global
+    // /busqueda?q= donde se muestran TODOS los productos que coinciden en el catálogo completo.
     if (t.length >= 3 && words.length <= 3) return `/busqueda?q=${encodeURIComponent(t)}`;
     return null;
   };
@@ -176,9 +183,17 @@ export function FloatingButtons() {
     // Navegación automática local: primero producto específico (SKU/nombre), luego categoría
     const auto = getAutoNavigatePath(t);
     const wantsToSee = /ver|mostrar|llevame|muestrame|quiero ver|busco|ir/i.test(t);
-    if (auto && (wantsToSee || t.length >= 5)) {
+    const isOferta = (auto?.path ?? "").includes("q=ofertas");
+    const isDestacado = (auto?.path ?? "").includes("q=destacados");
+    if (auto && ((wantsToSee || t.length >= 5) || isOferta || isDestacado)) {
       const isProduct = auto.path.startsWith("/producto/");
-      const friendly = isProduct ? `¡Perfecto! Te llevo a "${auto.label}" — abriendo la ficha...` : `¡Vamos! Busco "${t}" en todo el catálogo — abriendo los resultados...`;
+      const friendly = isProduct
+        ? `¡Perfecto! Te llevo a "${auto.label}" — abriendo la ficha...`
+        : isOferta
+        ? "¡Claro! Te muestro todas las ofertas disponibles del catálogo — abriendo los resultados..."
+        : isDestacado
+        ? "¡Con gusto! Estos son nuestros productos destacados — abriendo los resultados..."
+        : `¡Vamos! Busco "${t}" en todo el catálogo — abriendo los resultados...`;
       setAgentMessages((m) => [...m, { role: "agent", text: friendly }]);
       setAgentTyping(false);
       setTimeout(() => { window.location.href = auto.path; }, 900);

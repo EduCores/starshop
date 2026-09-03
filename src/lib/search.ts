@@ -55,6 +55,23 @@ export function scoreProductForQuery(p: Product, query: string): number {
 }
 
 export function searchProductsGeneric(query: string, limit?: number): SearchResult[] {
+  const qn = normalize(query).trim();
+
+  // Colecciones especiales: "ofertas" y "destacados" no son búsquedas de texto,
+  // son filtros categóricos del catálogo.
+  if (/^(ofertas?|descuentos?|promos?|promociones?|remates?|cyber(day)?|sale|liquidacion(es)?|ofertas flash)$/.test(qn)) {
+    const ofertas = products
+      .filter((p) => (p.originalPrice && p.originalPrice > p.price) || p.isFlashSale)
+      .sort((a, b) => (b.discount ?? 0) - (a.discount ?? 0) || b.soldCount - a.soldCount);
+    return (limit ? ofertas.slice(0, limit) : ofertas).map((product) => ({ product, score: 100 }));
+  }
+  if (/^(destacados?|recomendados?|featured|populares|mas vendidos|mejores vendidos|bestsellers?|lo mas vendido|top( ventas)?)$/.test(qn)) {
+    const destacados = products
+      .filter((p) => p.isFeatured || p.isBestSeller)
+      .sort((a, b) => Number(b.isFeatured ?? false) - Number(a.isFeatured ?? false) || b.soldCount - a.soldCount);
+    return (limit ? destacados.slice(0, limit) : destacados).map((product) => ({ product, score: 100 }));
+  }
+
   const results = products
     .map((p) => ({ product: p, score: scoreProductForQuery(p, query) }))
     .filter((r) => r.score > 0)
