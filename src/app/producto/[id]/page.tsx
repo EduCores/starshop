@@ -11,8 +11,14 @@ export function generateStaticParams() {
   return products.map((p) => ({ id: p.id }));
 }
 
+// Resuelve el producto por id, SKU o slug (el agente ACS enlaza con /producto/<sku>)
+function findProduct(id: string) {
+  const key = decodeURIComponent(id).toLowerCase();
+  return products.find((p) => p.id === id || p.sku.toLowerCase() === key || p.slug === key);
+}
+
 export function generateMetadata({ params }: { params: { id: string } }): Metadata {
-  const product = products.find((p) => p.id === params.id);
+  const product = findProduct(params.id);
   const title = product ? `${product.name} | Starshop` : "Producto | Starshop";
   const description = product?.shortDescription ?? "Ficha técnica, precio y despacho. Producto demo (mockup) — no es oferta real.";
   const url = `https://starshop.cl/producto/${params.id}`;
@@ -32,7 +38,7 @@ export function generateMetadata({ params }: { params: { id: string } }): Metada
 }
 
 export default function ProductPage({ params }: { params: { id: string } }) {
-  const product = products.find((p) => p.id === params.id);
+  const product = findProduct(params.id);
   if (!product) notFound();
 
   const category = superCategories.find((c) => c.id === product.categoryId);
