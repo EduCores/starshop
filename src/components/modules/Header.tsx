@@ -99,6 +99,20 @@ export function Header() {
     router.push(`/busqueda?q=${encodeURIComponent(q)}`);
   };
 
+  // Al elegir una categoría en el combo, se navega directo a la página de esa categoría.
+  // "Todas" activa el buscador global (/busqueda?q=...) para no perder lo escrito.
+  const handleCategoryChange = (value: string) => {
+    setCategoryFilter(value);
+    setShowAutocomplete(false);
+    const category = superCategories.find((c) => c.name === value);
+    if (category) {
+      router.push(`/categoria/${category.slug}`);
+    } else {
+      const q = search.trim();
+      router.push(q ? `/busqueda?q=${encodeURIComponent(q)}` : "/busqueda");
+    }
+  };
+
   // Mega menú: cierre retrasado para que el usuario alcance el panel sin que desaparezca
   const megaCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const openMega = () => {
@@ -274,7 +288,7 @@ export function Header() {
               <Clock className="h-3.5 w-3.5" /> Lun-Jue 10-18h | Vie 10-16h
             </span>
             <button onClick={() => setTheme(theme === "dark" ? "light" : "dark")} aria-label="Toggle theme" className="p-1 hover:bg-white/10 rounded">
-              {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              {(mounted ? theme : "dark") === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </button>
           </div>
         </div>
@@ -322,7 +336,7 @@ export function Header() {
             <div className="hidden md:flex items-center bg-[#E6E6E6] text-black text-xs px-2 rounded-l-md border-r border-zinc-300 gap-1 cursor-pointer hover:bg-zinc-200">
               <select
                 value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
+                onChange={(e) => handleCategoryChange(e.target.value)}
                 className="bg-transparent outline-none py-2 pr-4 pl-1 text-xs font-medium w-[88px] max-w-[88px] truncate cursor-pointer"
                 aria-label="Categoría"
               >
@@ -472,7 +486,7 @@ export function Header() {
             <div className="flex items-center bg-[#E6E6E6] text-black text-xs px-2 rounded-l-md border-r border-zinc-300 gap-1">
               <select
                 value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
+                onChange={(e) => handleCategoryChange(e.target.value)}
                 className="bg-transparent outline-none py-2 pr-4 pl-1 text-xs font-medium w-[80px] max-w-[80px] truncate cursor-pointer"
                 aria-label="Categoría"
               >
