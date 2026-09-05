@@ -8,7 +8,11 @@ import { Star, ShieldCheck, Truck, FileDown, Minus, Plus, ShoppingCart, Heart, S
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useCart } from "@/store/cart";
+import { useFavorites } from "@/store/favorites";
+import { toast } from "@/store/toast";
+import { motion, useAnimation } from "framer-motion";
 import { PriceComparator } from "@/components/modules/PriceComparator";
+import { useIsMounted } from "@/hooks/use-is-mounted";
 
 export function ProductDetail({ product }: { product: Product }) {
   const [qty, setQty] = useState(1);
@@ -16,10 +20,30 @@ export function ProductDetail({ product }: { product: Product }) {
   const [region, setRegion] = useState(chileRegions.find((r) => r.zone === "rm")?.name ?? chileRegions[0].name);
   const [comuna, setComuna] = useState("");
   const { addItem, setOpen } = useCart();
+  const mounted = useIsMounted();
+  const { has, toggle } = useFavorites();
+  // El estado persistido solo es seguro leerlo tras el montaje (evita mismatch de hidratación)
+  const isSaved = mounted && has(product.id);
+  const heartControls = useAnimation();
 
   const tierPrice = product.tierPrices?.find((t) => qty >= t.minQty && (t.maxQty === undefined || qty <= t.maxQty))?.price ?? product.price;
   const total = tierPrice * qty;
   const shippingInfo = getChileShipping(region, total);
+
+  const handleSave = () => {
+    const next = !isSaved;
+    toggle(product.id);
+    // Animación del corazón: pop + giro, re-ejecuta en cada clic
+    heartControls.start({
+      scale: [1, 1.5, 1],
+      rotate: [0, -15, 15, 0],
+      transition: { duration: 0.5, ease: "easeOut" },
+    });
+    toast(next ? "Guardado en favoritos" : "Eliminado de favoritos", {
+      variant: next ? "success" : "info",
+      description: product.name,
+    });
+  };
 
   return (
     <div className="container mt-4 bg-white dark:bg-zinc-900 rounded-lg border overflow-hidden">
@@ -132,8 +156,21 @@ export function ProductDetail({ product }: { product: Product }) {
               >
                 <ShoppingCart className="h-5 w-5" /> Agregar al Carrito
               </Button>
-              <Button size="lg" variant="outline" className="gap-2">
-                <Heart className="h-4 w-4" /> Guardar
+              <Button
+                size="lg"
+                variant="outline"
+                aria-pressed={isSaved}
+                onClick={handleSave}
+                className={`gap-2 ${isSaved ? "border-[#FF3B30] bg-red-50 dark:bg-red-950/30 text-[#FF3B30] dark:text-[#FF6B6B]" : ""}`}
+              >
+                <motion.span animate={heartControls} className="inline-flex">
+                  <Heart
+                    className={`h-4 w-4 transition-colors duration-200 ${
+                      isSaved ? "fill-[#FF3B30] text-[#FF3B30]" : "text-zinc-500"
+                    }`}
+                  />
+                </motion.span>
+                {isSaved ? "Guardado" : "Guardar"}
               </Button>
               <Button size="icon" variant="ghost">
                 <Share2 className="h-4 w-4" />
