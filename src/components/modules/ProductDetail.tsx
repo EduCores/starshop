@@ -4,10 +4,11 @@ import { Product, ShippingOption } from "@/types";
 import { formatCLP } from "@/lib/utils";
 import { chileRegions, getChileShipping } from "@/lib/mock-data";
 import { ShippingRegionComunaSelect } from "@/components/modules/ShippingRegionComunaSelect";
-import { Star, ShieldCheck, Truck, FileDown, Minus, Plus, ShoppingCart, Heart, Share2, Award, Check } from "lucide-react";
+import { Star, ShieldCheck, Truck, FileDown, Minus, Plus, ShoppingCart, Heart, Share2, Award, Check, Scale } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useCart } from "@/store/cart";
+import { PriceComparator } from "@/components/modules/PriceComparator";
 
 export function ProductDetail({ product }: { product: Product }) {
   const [qty, setQty] = useState(1);
@@ -51,7 +52,7 @@ export function ProductDetail({ product }: { product: Product }) {
         </div>
 
         {/* Info */}
-        <div className="space-y-4 min-w-0">
+        <div id="buy-box" className="space-y-4 min-w-0">
           <div>
             <div className="text-xs text-zinc-500">
               {product.brand} • SKU: {product.sku} • {product.subcategory}
@@ -82,6 +83,9 @@ export function ProductDetail({ product }: { product: Product }) {
             <div className="text-xs text-zinc-600">
               Precio sin IVA: {formatCLP(Math.round(tierPrice / 1.19))} • IVA incluido • Factura B2B disponible
             </div>
+            <a href="#comparador" className="inline-flex items-center gap-1 text-xs font-semibold text-[#007185] hover:underline">
+              <Scale className="h-3 w-3" /> Comparar precios en el mercado
+            </a>
             {product.tierPrices && (
               <div className="mt-3">
                 <div className="text-xs font-bold flex items-center gap-1">
@@ -175,6 +179,8 @@ export function ProductDetail({ product }: { product: Product }) {
           </div>
         </div>
       </div>
+
+      <PriceComparator product={product} />
     </div>
   );
 }

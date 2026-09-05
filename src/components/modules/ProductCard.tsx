@@ -1,7 +1,7 @@
 "use client";
 import { Product } from "@/types";
 import { formatCLP } from "@/lib/utils";
-import { Star, ShoppingCart, FileText, ShieldCheck, Heart, Eye } from "lucide-react";
+import { Star, ShoppingCart, FileText, ShieldCheck, Heart, Eye, Scale } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/store/cart";
@@ -87,6 +87,9 @@ export function ProductCard({ product, showOriginalPrice = false, addButtonVaria
             {showOriginalPrice && product.originalPrice && <span className="text-xs line-through text-zinc-400">{formatCLP(product.originalPrice)}</span>}
           </div>
           {product.tierPrices && <div className="text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded w-fit">Mayorista: {formatCLP(product.tierPrices[product.tierPrices.length - 1].price)}</div>}
+          <Link href={`/producto/${product.id}#comparador`} className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#007185] hover:underline">
+            <Scale className="h-3 w-3" /> Comparar precios en el mercado
+          </Link>
           <div className="grid grid-cols-1 gap-1.5 pt-1">
             <Button size="sm" variant={addButtonVariant} className="h-8 text-xs font-bold gap-1 w-full" onClick={handleAdd}>
               <ShoppingCart className="h-3.5 w-3.5" /> Agregar
