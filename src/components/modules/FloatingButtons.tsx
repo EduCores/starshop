@@ -24,8 +24,9 @@ export function FloatingButtons() {
   const [agentPulse, setAgentPulse] = useState(0);
   const [agentListening, setAgentListening] = useState(false);
   const recognitionRef = useRef<any>(null);
+  const agentScrollRef = useRef<HTMLDivElement>(null);
 
-  // Typewriter IA: hace que el agente parezca escribir (35ms/letra) en vez de volcar
+  // Typewriter IA: hace que el agente parezca escribir (28ms/2ch) en vez de volcar
   const typeAgentMessage = (full: string) => {
     setAgentMessages((m) => [...m, { role: "agent", text: "" }]);
     let idx = 0;
@@ -42,6 +43,11 @@ export function FloatingButtons() {
       if (idx >= full.length) clearInterval(t);
     }, 28);
   };
+
+  // Auto-scroll: siempre enfoca el nuevo mensaje / tipeo
+  useEffect(() => {
+    agentScrollRef.current?.scrollTo({ top: agentScrollRef.current.scrollHeight, behavior: "smooth" });
+  }, [agentMessages, agentTyping]);
 
   const ACS_URL = process.env.NEXT_PUBLIC_ACS_API_URL ?? "https://agentic-commerce-stack.vercel.app";
 
@@ -291,7 +297,7 @@ export function FloatingButtons() {
               <button onClick={() => setAgentOpen(false)} className="p-1 hover:bg-white/20 rounded" aria-label="Cerrar"><X className="h-4 w-4" /></button>
             </div>
             <div className="text-[11px] bg-emerald-50 border-b border-emerald-200 text-emerald-800 px-3 py-2 flex items-center gap-2"><span className="h-2 w-2 bg-emerald-500 rounded-full animate-pulse" /> ACS activo</div>
-            <div className="flex-1 max-h-[320px] overflow-auto p-3 space-y-2">
+            <div ref={agentScrollRef} className="flex-1 max-h-[320px] overflow-auto p-3 space-y-2 scroll-smooth">
               {agentMessages.map((m, i) => (
                 <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
                   <div className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm ${m.role === "user" ? "bg-[rgb(255_216_20/var(--tw-bg-opacity,1))] text-black" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100"}`}>{m.text}</div>
