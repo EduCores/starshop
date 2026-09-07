@@ -50,16 +50,37 @@ export async function POST(req: NextRequest) {
         headers: { Authorization: `Bearer ${openaiKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({ model: "tts-1", input: clean, voice: voice || "nova", response_format: "mp3" }),
       });
-      if (!r.ok) {
-        const t = await r.text().catch(() => "");
-        console.warn("[tts] OpenAI", r.status, t.slice(0, 200));
-        return NextResponse.json({ error: `TTS cloud ${r.status}` }, { status: 502 });
+      if (r.ok) {
+        const buf = Buffer.from(await r.arrayBuffer());
+        return new NextResponse(buf, { headers: { "Content-Type": "audio/mpeg", "Cache-Control": "no-cache" } });
       }
-      const buf = Buffer.from(await r.arrayBuffer());
-      return new NextResponse(buf, { headers: { "Content-Type": "audio/mpeg", "Cache-Control": "no-cache" } });
+      console.warn("[tts] OpenAI", r.status, (await r.text().catch(() => "")).slice(0, 200));
     }
 
-    return NextResponse.json({ error: "Sin ELEVEN_API_KEY ni OPENAI_API_KEY — usa voz del navegador", fallback: "webspeech" }, { status: 501 });
+    // 3) Edge TTS gratis (sin key, voz es-CL neural, gratis sin tarjeta)
+    try {
+      const edgeVoice = process.env.EDGE_TTS_VOICE || "es-CL-CatalinaNeural";
+      const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      const ssml = `<speak version='1.0' xml:lang='es-CL'><voice name='${edgeVoice}'>${esc(clean)}</voice></speak>`;
+      const r = await fetch("https://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=6A5AAE6D4EAFF3369FB100362022AACI", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/ssml+xml",
+          "X-Microsoft-OutputFormat": "audio-24khz-48kbitrate-mono-mp3",
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        },
+        body: ssml,
+      });
+      if (r.ok) {
+        const buf = Buffer.from(await r.arrayBuffer());
+        if (buf.length > 1000) return new NextResponse(buf, { headers: { "Content-Type": "audio/mpeg", "Cache-Control": "no-cache" } });
+      }
+      console.warn("[tts] Edge", r.status, (await r.text().catch(() => "")).slice(0, 200));
+    } catch (e) {
+      console.warn("[tts] Edge error", e instanceof Error ? e.message : e);
+    }
+
+    return NextResponse.json({ error: "Sin TTS cloud — usa voz del navegador", fallback: "webspeech" }, { status: 501 });
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
   }
