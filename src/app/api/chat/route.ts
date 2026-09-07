@@ -133,10 +133,13 @@ function formatContext(top: {p:any,s:number}[]) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { message, agentSlug, storeId } = await req.json();
+    const { message, history, agentSlug, storeId } = await req.json();
     if (!message || typeof message !== "string") {
       return NextResponse.json({ error: "Falta message" }, { status: 400 });
     }
+    const historyText = Array.isArray(history) && history.length
+      ? `\nHistorial reciente:\n${(history as Array<{role?:string;text?:string}>).slice(-6).map(m=>`${m.role==="user"?"Cliente":"Star"}: ${String(m.text??"").slice(0,300)}`).join("\n")}\n`
+      : "";
 
     const openRouterKeyEarly = process.env.OPENROUTER_API_KEY;
     const openAiKeyEarly = process.env.OPENAI_API_KEY;
@@ -260,7 +263,7 @@ Responde con 2-3 preguntas de calificación: uso (hogar/industrial), presupuesto
 
 5) Usa SOLO el contexto Excel provisto. No inventes SKU/precio/stock. Si nada calza, di que no está y ofrece alternativa de la misma categoría. Responde siempre en español de Chile, conciso, con SKU, precio CLP, SEC y URL /producto/[slug] o /categoria/[slug].`;
 
-    const userPrompt = `Contexto RAG (top ${top.length} productos para "${message}"):\n${context}\n\nPregunta del cliente: ${message}\n\nInstrucción: Si es vaga, guía a categoría. Si es específica y hay match, seduce y cierra venta + sugiere navigateTo. Usa tools si necesitas buscar o navegar.`;
+    const userPrompt = `Contexto RAG (top ${top.length} productos para "${message}"):\n${context}\n${historyText}\nPregunta del cliente: ${message}\n\nInstrucción: Si es vaga, guía a categoría. Si es específica y hay match, seduce y cierra venta + sugiere navigateTo. Usa tools si necesitas buscar o navegar. Considera el historial para recordar productos previos.`;
 
     const tools: any[] = [
       {

@@ -100,12 +100,14 @@ export function FloatingButtons() {
     return null;
   };
 
-  const getAgentReply = async (input: string): Promise<{ text: string; navigateTo?: string }> => {
+  const getAgentReply = async (input: string, history: { role: string; text: string }[] = []): Promise<{ text: string; navigateTo?: string }> => {
     try {
+      // Manda últimos 8 turnos para que el LLM recuerde contexto (ej: “¿y con despacho?”)
+      const historySlice = history.slice(-8);
       const r = await fetch(`${ACS_URL}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: input, agentSlug: "sales-assistant", storeId: "seed-store" }),
+        body: JSON.stringify({ message: input, history: historySlice, agentSlug: "sales-assistant", storeId: "seed-store" }),
       });
       const data = await r.json();
       const calls = data.toolCalls ?? [];
@@ -217,11 +219,13 @@ export function FloatingButtons() {
       setAgentTyping(false);
       typeAgentMessage(friendly);
       setTimeout(() => { window.location.href = auto.path; }, 900);
-      getAgentReply(t).catch(() => {});
+      getAgentReply(t, agentMessages.slice(-8) as never).catch(() => {});
       return;
     }
 
-    const { text, navigateTo } = await getAgentReply(t);
+    // Pasa historial (sin el mensaje actual que ya es t) para memoria real
+    const historyForLLM = agentMessages.slice(-8);
+    const { text, navigateTo } = await getAgentReply(t, historyForLLM as never);
     setAgentTyping(false);
     typeAgentMessage(text);
     const finalNav = navigateTo ?? auto?.path;
