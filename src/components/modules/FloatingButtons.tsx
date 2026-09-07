@@ -24,7 +24,7 @@ export function FloatingButtons() {
   const agentScrollRef = useRef<HTMLDivElement>(null);
   const [voiceOn, setVoiceOn] = useState(false);
   const [speakingId, setSpeakingId] = useState<number | null>(null);
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Typewriter IA: hace que el agente parezca escribir (28ms/2ch) en vez de volcar
   const typeAgentMessage = (full: string) => {
@@ -47,25 +47,32 @@ export function FloatingButtons() {
     }, 28);
   };
 
-  // Voz: solo cloud (ElevenLabs/OpenAI/Edge) — sin Web Speech robótica
+  // Voz: solo cloud (ElevenLabs/OpenAI/Edge/Google) — botón silencia real
   const speak = async (text: string, id?: number) => {
     try {
+      stopSpeak();
       const clean = text.replace(/[*#_]/g, "").slice(0, 900);
       const r = await fetch("/api/tts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: clean }) });
       if (!r.ok || !r.headers.get("content-type")?.includes("audio")) return;
       const blob = await r.blob();
       const url = URL.createObjectURL(blob);
       const audio = new Audio(url);
+      audioRef.current = audio;
       if (id !== undefined) setSpeakingId(id);
-      audio.onended = () => setSpeakingId(null);
-      audio.onpause = () => setSpeakingId(null);
+      audio.onended = () => { setSpeakingId(null); audioRef.current = null; };
+      audio.onpause = () => { setSpeakingId(null); };
       await audio.play();
     } catch {}
   };
 
   const stopSpeak = () => {
+    try {
+      audioRef.current?.pause();
+      if (audioRef.current) audioRef.current.currentTime = 0;
+      audioRef.current = null;
+    } catch {}
     setSpeakingId(null);
-    try { document.querySelectorAll("audio").forEach((a) => { (a as HTMLAudioElement).pause(); (a as HTMLAudioElement).currentTime = 0; }); } catch {}
+    try { document.querySelectorAll("audio").forEach((a) => { (a as HTMLAudioElement).pause(); }); } catch {}
   };
 
   useEffect(() => {
