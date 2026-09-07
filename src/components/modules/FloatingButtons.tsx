@@ -15,11 +15,8 @@ function WhatsAppIcon({ className }: { className?: string }) {
 
 export function FloatingButtons() {
   const [showTop, setShowTop] = useState(false);
-  const { isOpen: agentOpen, setOpen: setAgentOpen, pendingProduct, setPendingProduct } = useAgent();
+  const { isOpen: agentOpen, setOpen: setAgentOpen, pendingProduct, setPendingProduct, messages: agentMessages, setMessages: setAgentMessages } = useAgent();
   const [agentInput, setAgentInput] = useState("");
-  const [agentMessages, setAgentMessages] = useState<{ role: "user" | "agent"; text: string }[]>([
-    { role: "agent", text: "Hola! Soy Star, tu asistente de Starshop. ¿En qué te ayudo hoy?" },
-  ]);
   const [agentTyping, setAgentTyping] = useState(false);
   const [agentPulse, setAgentPulse] = useState(0);
   const [agentListening, setAgentListening] = useState(false);
@@ -28,12 +25,12 @@ export function FloatingButtons() {
 
   // Typewriter IA: hace que el agente parezca escribir (28ms/2ch) en vez de volcar
   const typeAgentMessage = (full: string) => {
-    setAgentMessages((m) => [...m, { role: "agent", text: "" }]);
+    setAgentMessages((m) => [...(m as { role: "user" | "agent"; text: string }[]), { role: "agent", text: "" }]);
     let idx = 0;
     const t = setInterval(() => {
       idx = Math.min(idx + 2, full.length);
       setAgentMessages((curr) => {
-        const copy = [...curr];
+        const copy = [...(curr as { role: "user" | "agent"; text: string }[])];
         const last = copy.length - 1;
         if (last >= 0 && copy[last].role === "agent") {
           copy[last] = { ...copy[last], text: full.slice(0, idx) };
