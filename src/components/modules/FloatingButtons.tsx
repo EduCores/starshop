@@ -25,6 +25,24 @@ export function FloatingButtons() {
   const [agentListening, setAgentListening] = useState(false);
   const recognitionRef = useRef<any>(null);
 
+  // Typewriter IA: hace que el agente parezca escribir (35ms/letra) en vez de volcar
+  const typeAgentMessage = (full: string) => {
+    setAgentMessages((m) => [...m, { role: "agent", text: "" }]);
+    let idx = 0;
+    const t = setInterval(() => {
+      idx = Math.min(idx + 2, full.length);
+      setAgentMessages((curr) => {
+        const copy = [...curr];
+        const last = copy.length - 1;
+        if (last >= 0 && copy[last].role === "agent") {
+          copy[last] = { ...copy[last], text: full.slice(0, idx) };
+        }
+        return copy;
+      });
+      if (idx >= full.length) clearInterval(t);
+    }, 28);
+  };
+
   const ACS_URL = process.env.NEXT_PUBLIC_ACS_API_URL ?? "https://agentic-commerce-stack.vercel.app";
 
   const getProductPath = (input: string): string | null => {
@@ -107,17 +125,14 @@ export function FloatingButtons() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Abrir desde Cotizar con animación simpática
+  // Abrir desde Cotizar con animación simpática + tipeo IA
   useEffect(() => {
     if (pendingProduct) {
       setAgentTyping(true);
       setAgentPulse((k) => k + 1);
       setTimeout(() => {
-        setAgentMessages((m) => [
-          ...m,
-          { role: "agent", text: `¡Genial! Quieres cotizar "${pendingProduct}". ¿Me cuentas cuántas unidades necesitas y si es para empresa? ¿RUT y comuna para calcular despacho?` },
-        ]);
         setAgentTyping(false);
+        typeAgentMessage(`¡Genial! Quieres cotizar "${pendingProduct}". ¿Me cuentas cuántas unidades necesitas y si es para empresa? ¿RUT y comuna para calcular despacho?`);
         setPendingProduct(null);
       }, 700);
     }
@@ -135,7 +150,7 @@ export function FloatingButtons() {
     const w = window as any;
     const SR = w.SpeechRecognition || w.webkitSpeechRecognition;
     if (!SR) {
-      setAgentMessages((m) => [...m, { role: "agent", text: "Tu navegador no soporta captura por voz. Usa Chrome, Edge o Safari para dictar tu consulta." }]);
+      typeAgentMessage("Tu navegador no soporta captura por voz. Usa Chrome, Edge o Safari para dictar tu consulta.");
       return;
     }
     if (agentListening) {
@@ -160,7 +175,7 @@ export function FloatingButtons() {
     recognition.onerror = (e: any) => {
       setAgentListening(false);
       if (e?.error && e.error !== "aborted" && e.error !== "no-speech" && e.error !== "not-allowed") {
-        setAgentMessages((m) => [...m, { role: "agent", text: `No pude captar tu voz (${e.error}). Intenta de nuevo.` }]);
+        typeAgentMessage(`No pude captar tu voz (${e.error}). Intenta de nuevo.`);
       }
     };
     recognitionRef.current = recognition;
@@ -169,16 +184,18 @@ export function FloatingButtons() {
       setAgentListening(true);
     } catch {
       setAgentListening(false);
-      setAgentMessages((m) => [...m, { role: "agent", text: "No pude iniciar el micrófono. Verifica que esté disponible y da permiso al navegador." }]);
+      typeAgentMessage("No pude iniciar el micrófono. Verifica que esté disponible y da permiso al navegador.");
     }
   };
 
-  const sendAgent = async (override?: string) => {
+   const sendAgent = async (override?: string) => {
     const t = (override ?? agentInput).trim();
     if (!t) return;
     setAgentMessages((m) => [...m, { role: "user", text: t }]);
     setAgentInput("");
     setAgentTyping(true);
+    // Pequeño delay para que se vea que piensa antes de escribir
+    await new Promise((r) => setTimeout(r, 280));
 
     // Navegación automática local: primero producto específico (SKU/nombre), luego categoría
     const auto = getAutoNavigatePath(t);
@@ -194,19 +211,19 @@ export function FloatingButtons() {
         : isDestacado
         ? "¡Con gusto! Estos son nuestros productos destacados — abriendo los resultados..."
         : `¡Vamos! Busco "${t}" en todo el catálogo — abriendo los resultados...`;
-      setAgentMessages((m) => [...m, { role: "agent", text: friendly }]);
       setAgentTyping(false);
+      typeAgentMessage(friendly);
       setTimeout(() => { window.location.href = auto.path; }, 900);
       getAgentReply(t).catch(() => {});
       return;
     }
 
     const { text, navigateTo } = await getAgentReply(t);
-    setAgentMessages((m) => [...m, { role: "agent", text }]);
     setAgentTyping(false);
+    typeAgentMessage(text);
     const finalNav = navigateTo ?? auto?.path;
     if (finalNav) {
-      setTimeout(() => { window.location.href = finalNav.startsWith("http") ? finalNav : finalNav; }, 800);
+      setTimeout(() => { window.location.href = finalNav.startsWith("http") ? finalNav : finalNav; }, 1200);
     }
   };
 
