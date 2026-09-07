@@ -47,50 +47,29 @@ export function FloatingButtons() {
     }, 28);
   };
 
-  // Voz: Web Speech API (gratis, es-CL) + fallback a /api/tts si hay key
+  // Voz: solo cloud (ElevenLabs/OpenAI/Edge) — sin Web Speech robótica
   const speak = async (text: string, id?: number) => {
     try {
-      window.speechSynthesis.cancel();
-      // Intenta TTS cloud si existe /api/tts (ElevenLabs/OpenAI), sino Web Speech
       const clean = text.replace(/[*#_]/g, "").slice(0, 900);
-      // Prueba cloud primero (no bloquea si falla)
-      try {
-        const r = await fetch("/api/tts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: clean }) });
-        if (r.ok && r.headers.get("content-type")?.includes("audio")) {
-          const blob = await r.blob();
-          const url = URL.createObjectURL(blob);
-          const audio = new Audio(url);
-          if (id !== undefined) setSpeakingId(id);
-          audio.onended = () => setSpeakingId(null);
-          await audio.play();
-          return;
-        }
-      } catch {}
-      // Fallback Web Speech
-      const utter = new SpeechSynthesisUtterance(clean);
-      utter.lang = "es-CL";
-      utter.rate = 1.02;
-      utter.pitch = 1;
-      const voices = window.speechSynthesis.getVoices();
-      const es = voices.find((v) => v.lang.startsWith("es-CL")) || voices.find((v) => v.lang.startsWith("es")) || null;
-      if (es) utter.voice = es;
+      const r = await fetch("/api/tts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: clean }) });
+      if (!r.ok || !r.headers.get("content-type")?.includes("audio")) return;
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
       if (id !== undefined) setSpeakingId(id);
-      utter.onend = () => setSpeakingId(null);
-      utteranceRef.current = utter;
-      window.speechSynthesis.speak(utter);
+      audio.onended = () => setSpeakingId(null);
+      audio.onpause = () => setSpeakingId(null);
+      await audio.play();
     } catch {}
   };
 
   const stopSpeak = () => {
-    try { window.speechSynthesis.cancel(); } catch {}
     setSpeakingId(null);
+    try { document.querySelectorAll("audio").forEach((a) => { (a as HTMLAudioElement).pause(); (a as HTMLAudioElement).currentTime = 0; }); } catch {}
   };
 
-  // Carga voces (Chrome las carga async)
   useEffect(() => {
-    if (typeof window !== "undefined" && "speechSynthesis" in window) {
-      window.speechSynthesis.getVoices();
-      window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+    if (typeof window !== "undefined") {
       const saved = localStorage.getItem("starshop-voiceOn");
       if (saved === "1") setVoiceOn(true);
     }
