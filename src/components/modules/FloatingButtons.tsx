@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { ArrowUp, Bot, X, Send, Sparkles, Mic, MicOff } from "lucide-react";
+import { ArrowUp, Bot, X, Send, Sparkles, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAgent } from "@/store/agent";
 import { products } from "@/lib/mock-data";
@@ -22,6 +22,9 @@ export function FloatingButtons() {
   const [agentListening, setAgentListening] = useState(false);
   const recognitionRef = useRef<any>(null);
   const agentScrollRef = useRef<HTMLDivElement>(null);
+  const [voiceOn, setVoiceOn] = useState(false);
+  const [speakingId, setSpeakingId] = useState<number | null>(null);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   // Typewriter IA: hace que el agente parezca escribir (28ms/2ch) en vez de volcar
   const typeAgentMessage = (full: string) => {
@@ -37,9 +40,66 @@ export function FloatingButtons() {
         }
         return copy;
       });
-      if (idx >= full.length) clearInterval(t);
+      if (idx >= full.length) {
+        clearInterval(t);
+        if (voiceOn) speak(full);
+      }
     }, 28);
   };
+
+  // Voz: Web Speech API (gratis, es-CL) + fallback a /api/tts si hay key
+  const speak = async (text: string, id?: number) => {
+    try {
+      window.speechSynthesis.cancel();
+      // Intenta TTS cloud si existe /api/tts (ElevenLabs/OpenAI), sino Web Speech
+      const clean = text.replace(/[*#_]/g, "").slice(0, 900);
+      // Prueba cloud primero (no bloquea si falla)
+      try {
+        const r = await fetch("/api/tts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: clean }) });
+        if (r.ok && r.headers.get("content-type")?.includes("audio")) {
+          const blob = await r.blob();
+          const url = URL.createObjectURL(blob);
+          const audio = new Audio(url);
+          if (id !== undefined) setSpeakingId(id);
+          audio.onended = () => setSpeakingId(null);
+          await audio.play();
+          return;
+        }
+      } catch {}
+      // Fallback Web Speech
+      const utter = new SpeechSynthesisUtterance(clean);
+      utter.lang = "es-CL";
+      utter.rate = 1.02;
+      utter.pitch = 1;
+      const voices = window.speechSynthesis.getVoices();
+      const es = voices.find((v) => v.lang.startsWith("es-CL")) || voices.find((v) => v.lang.startsWith("es")) || null;
+      if (es) utter.voice = es;
+      if (id !== undefined) setSpeakingId(id);
+      utter.onend = () => setSpeakingId(null);
+      utteranceRef.current = utter;
+      window.speechSynthesis.speak(utter);
+    } catch {}
+  };
+
+  const stopSpeak = () => {
+    try { window.speechSynthesis.cancel(); } catch {}
+    setSpeakingId(null);
+  };
+
+  // Carga voces (Chrome las carga async)
+  useEffect(() => {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.getVoices();
+      window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+      const saved = localStorage.getItem("starshop-voiceOn");
+      if (saved === "1") setVoiceOn(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") localStorage.setItem("starshop-voiceOn", voiceOn ? "1" : "0");
+    if (!voiceOn) stopSpeak();
+  }, [voiceOn]);
 
   // Auto-scroll: siempre enfoca el nuevo mensaje / tipeo
   useEffect(() => {
@@ -295,13 +355,23 @@ export function FloatingButtons() {
           >
             <div className="bg-[rgb(255_216_20/var(--tw-bg-opacity,1))] text-black px-4 py-3 flex items-center justify-between">
               <div className="flex items-center gap-2 font-bold text-sm"><Bot className="h-5 w-5" /> Agente Starshop</div>
-              <button onClick={() => setAgentOpen(false)} className="p-1 hover:bg-white/20 rounded" aria-label="Cerrar"><X className="h-4 w-4" /></button>
+              <div className="flex items-center gap-1">
+                <button onClick={() => setVoiceOn((v) => !v)} title={voiceOn ? "Voz activada (toca para silenciar)" : "Activar voz del agente"} aria-label="Voz" className={`p-1.5 rounded ${voiceOn ? "bg-black text-white" : "hover:bg-white/20"}`}>{voiceOn ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}</button>
+                <button onClick={() => setAgentOpen(false)} className="p-1 hover:bg-white/20 rounded" aria-label="Cerrar"><X className="h-4 w-4" /></button>
+              </div>
             </div>
             <div className="text-[11px] bg-emerald-50 border-b border-emerald-200 text-emerald-800 px-3 py-2 flex items-center gap-2"><span className="h-2 w-2 bg-emerald-500 rounded-full animate-pulse" /> ACS activo</div>
             <div ref={agentScrollRef} className="flex-1 max-h-[320px] overflow-auto p-3 space-y-2 scroll-smooth">
               {agentMessages.map((m, i) => (
                 <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-                  <div className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm ${m.role === "user" ? "bg-[rgb(255_216_20/var(--tw-bg-opacity,1))] text-black" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100"}`}>{m.text}</div>
+                  <div className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm flex items-end gap-1 ${m.role === "user" ? "bg-[rgb(255_216_20/var(--tw-bg-opacity,1))] text-black" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100"}`}>
+                    <span className="flex-1 whitespace-pre-wrap break-words">{m.text}</span>
+                    {m.role === "agent" && m.text && (
+                      <button onClick={() => (speakingId === i ? stopSpeak() : speak(m.text, i))} title={speakingId === i ? "Detener voz" : "Escuchar"} className={`ml-1 shrink-0 rounded-full p-1 ${speakingId === i ? "bg-red-500 text-white animate-pulse" : "bg-white/70 hover:bg-white text-zinc-600"}`}>
+                        <Volume2 className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
               {agentTyping && (
