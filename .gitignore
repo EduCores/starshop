@@ -4,3 +4,4 @@ data/users.json
 .env
 .env.local
 dev-server-*.log
+*.tsbuildinfo
