@@ -11,6 +11,12 @@ data/*.db
 data/*.db-wal
 data/*.db-shm
 
+# Órdenes persistidas localmente (sensibles: datos de clientes)
+data/orders.json
+
+# Salida de graphify (grafo de conocimiento, regenerable con /draw)
+graphify-out/
+
 # Logs de servidor de pruebas
 start-*.log
 

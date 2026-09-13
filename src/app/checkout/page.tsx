@@ -89,6 +89,13 @@ export default function CheckoutPage() {
     // Guardar orden pendiente para recuperar tras retorno de la pasarela
     sessionStorage.setItem("starshop-last-order", JSON.stringify(order));
 
+    // Persistir también en el servidor (fire-and-forget: si falla, el checkout continúa)
+    fetch("/api/orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(order),
+    }).catch(() => {});
+
     try {
       if (paymentMethod === "transferencia") {
         clearCart();

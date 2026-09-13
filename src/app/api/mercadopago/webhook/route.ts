@@ -1,29 +1,65 @@
 import { NextRequest, NextResponse } from "next/server";
+import { MercadoPagoConfig, Payment } from "mercadopago";
+import { findOrderByExternalRef, updateOrderStatus, OrderStatus } from "@/lib/orders";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+function mpStatusToOrderStatus(status: string | undefined): OrderStatus {
+  switch (status) {
+    case "approved":
+      return "approved";
+    case "pending":
+    case "in_process":
+    case "authorized":
+      return "pending";
+    case "rejected":
+    case "cancelled":
+      return "rejected";
+    default:
+      return "failed";
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
     const search = new URL(req.url).searchParams;
+    const paymentId = body?.data?.id || search.get("data.id") || search.get("id");
+    const topic = body?.type || body?.topic || search.get("type") || search.get("topic");
 
-    // MercadoPago envía notificaciones con type/topic y data.id o resource
-    console.log("[MercadoPago webhook] headers origin:", req.headers.get("origin"));
-    console.log("[MercadoPago webhook] query:", Object.fromEntries(search.entries()));
-    console.log("[MercadoPago webhook] body:", JSON.stringify(body).slice(0, 4000));
+    // MercadoPago envía notificaciones de varios tipos (payment, merchant_order...).
+    // Solo procesamos "payment": consultamos el pago real con la API usando el
+    // access token (nunca confiamos en el body del webhook, que podría falsificarse).
+    if (topic && topic !== "payment") {
+      return NextResponse.json({ received: true, ignored: topic });
+    }
 
-    // Aquí validarías el pago con la API de MP (Payment.findById) usando el access_token.
-    // Por ahora solo acuse de recibo 200 para no reintentar.
-    // Ej:
-    // const paymentId = body?.data?.id || search.get("data.id");
-    // if (paymentId) { const payment = await new Payment(client).get({ id: paymentId }); ... actualizar orden ... }
+    if (paymentId && process.env.MERCADOPAGO_ACCESS_TOKEN) {
+      const client = new MercadoPagoConfig({ accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN });
+      const payment = new Payment(client);
+      const p = await payment.get({ id: String(paymentId) });
 
+      console.log(
+        `[MercadoPago webhook] payment ${paymentId} status=${p.status} ref=${p.external_reference ?? "-"}`
+      );
+
+      const ref = p.external_reference;
+      if (ref) {
+        const order = findOrderByExternalRef(ref);
+        if (order) updateOrderStatus(order.orderId, mpStatusToOrderStatus(p.status));
+      }
+    } else {
+      // Sin access token (modo integración local): solo acuse de recibo.
+      console.log(`[MercadoPago webhook] recibido payment=${paymentId ?? "-"} (sin token para validar)`);
+    }
+
+    // Siempre 200 para que MP no reintente indefinidamente.
     return NextResponse.json({ received: true });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Error en webhook MercadoPago";
     console.error("[MercadoPago webhook] ", msg);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return NextResponse.json({ received: true, warning: msg });
   }
 }
 

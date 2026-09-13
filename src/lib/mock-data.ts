@@ -990,13 +990,8 @@ export const heroSlides = [
   },
 ];
 
-export function formatCLP(value: number) {
-  return new Intl.NumberFormat("es-CL", {
-    style: "currency",
-    currency: "CLP",
-    maximumFractionDigits: 0,
-  }).format(value);
-}
+// formatCLP vive en src/lib/utils.ts — re-exportado para mantener la API de este módulo.
+export { formatCLP } from "./utils";
 
 export function discountPercent(original: number, current: number) {
   return Math.round(((original - current) / original) * 100);
