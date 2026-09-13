@@ -5,3 +5,14 @@ data/users.json
 .env.local
 dev-server-*.log
 *.tsbuildinfo
+
+# Base de datos SQLite local (regenerable con npm run db:seed) + archivos WAL
+data/*.db
+data/*.db-wal
+data/*.db-shm
+
+# Logs de servidor de pruebas
+start-*.log
+
+# Script de debug temporal
+debug-zonas.mjs
