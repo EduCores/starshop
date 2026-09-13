@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { blogPosts } from "@/lib/blog-mock";
 
 export function generateStaticParams() {
@@ -24,7 +25,7 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
       <div className="text-xs text-zinc-500 mt-4">{post.date} • {post.author}</div>
       <h1 className="text-2xl md:text-3xl font-black leading-tight mt-1">{post.title}</h1>
       <p className="text-zinc-600 dark:text-zinc-400 mt-2">{post.excerpt}</p>
-      <img src={post.image} alt={post.title} className="mt-6 w-full rounded-lg border bg-zinc-50 object-cover max-h-[400px]" />
+      <Image src={post.image} alt={post.title} width={800} height={400} className="mt-6 w-full rounded-lg border bg-zinc-50 object-cover max-h-[400px]" />
       <div className="flex gap-1.5 mt-4 flex-wrap">
         {post.tags.map((t) => <span key={t} className="text-xs bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded-full">{t}</span>)}
       </div>

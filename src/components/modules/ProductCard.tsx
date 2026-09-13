@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useCart } from "@/store/cart";
 import { useAgent } from "@/store/agent";
 import Link from "next/link";
+import Image from "next/image";
 import { motion } from "framer-motion";
 
 export function ProductCard({ product, showOriginalPrice = false, addButtonVariant = "default" as const }: { product: Product; showOriginalPrice?: boolean; addButtonVariant?: "default" | "starshop" }) {
@@ -31,11 +32,12 @@ export function ProductCard({ product, showOriginalPrice = false, addButtonVaria
       className="group bg-white dark:bg-zinc-900 rounded-lg border hover:shadow-xl transition-shadow flex flex-col overflow-hidden"
     >
       <Link href={`/producto/${product.id}`} className="relative aspect-square bg-zinc-50 dark:bg-zinc-800 overflow-hidden block sm:aspect-auto sm:max-h-[220px]">
-        <img
+        <Image
           src={product.images[0]}
           alt={product.name}
+          width={600}
+          height={600}
           className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-          loading="lazy"
         />
         {/* Badges */}
         <div className="absolute top-2 left-2 flex flex-col gap-1">

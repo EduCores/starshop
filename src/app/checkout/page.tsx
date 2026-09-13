@@ -12,6 +12,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Truck, ShieldCheck, Lock, CreditCard } from "lucide-react";
+import { toast } from "@/store/toast";
 import Link from "next/link";
 
 const schema = z.object({
@@ -154,7 +155,7 @@ export default function CheckoutPage() {
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Error procesando el pago";
-      alert(msg);
+      toast("No se pudo procesar el pago", { variant: "error", description: msg, duration: 6000 });
       setIsSubmitting(false);
     }
   };

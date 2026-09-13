@@ -6,6 +6,7 @@ import { formatCLP } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FileText, Download, Mail, Building2 } from "lucide-react";
+import Image from "next/image";
 
 export default function CotizacionPage() {
   const { items, total } = useCart();
@@ -83,7 +84,7 @@ export default function CotizacionPage() {
         <div className="divide-y mt-4">
           {items.map(({ product, quantity }) => (
             <div key={product.id} className="py-3 flex gap-3">
-              <img src={product.images[0]} alt={product.name} className="h-16 w-16 object-cover rounded border" />
+              <Image src={product.images[0]} alt={product.name} width={64} height={64} className="h-16 w-16 object-cover rounded border" />
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium line-clamp-2">{product.name}</div>
                 <div className="text-xs text-zinc-500">{product.brand} • {product.sku} • Cant: {quantity}</div>

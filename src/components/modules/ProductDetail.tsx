@@ -5,6 +5,7 @@ import { formatCLP } from "@/lib/utils";
 import { chileRegions, getChileShipping } from "@/lib/mock-data";
 import { ShippingRegionComunaSelect } from "@/components/modules/ShippingRegionComunaSelect";
 import { Star, ShieldCheck, Truck, FileDown, Minus, Plus, ShoppingCart, Heart, Share2, Award, Check, Scale } from "lucide-react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useCart } from "@/store/cart";
@@ -51,7 +52,7 @@ export function ProductDetail({ product }: { product: Product }) {
         {/* Gallery */}
         <div className="space-y-3 min-w-0">
           <div className="aspect-square bg-zinc-50 dark:bg-zinc-800 rounded-lg overflow-hidden border">
-            <img src={product.images[selectedImage]} alt={product.name} className="h-full w-full object-contain p-4" />
+            <Image src={product.images[selectedImage]} alt={product.name} width={600} height={600} priority className="h-full w-full object-contain p-4" />
           </div>
            <div className="flex gap-2 overflow-x-auto">
              {product.images.map((img, i) => (
@@ -60,7 +61,7 @@ export function ProductDetail({ product }: { product: Product }) {
                 onClick={() => setSelectedImage(i)}
                 className={`h-16 w-16 rounded border-2 overflow-hidden ${selectedImage === i ? "border-[#FF3B30]" : "border-zinc-200"}`}
               >
-                <img src={img} alt="" className="h-full w-full object-cover" />
+                <Image src={img} alt="" width={64} height={64} className="h-full w-full object-cover" />
               </button>
             ))}
             <div className="h-16 w-16 rounded border border-dashed flex flex-col items-center justify-center text-[10px] text-zinc-500">

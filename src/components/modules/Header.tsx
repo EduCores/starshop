@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { superCategories, products } from "@/lib/mock-data";
 import { useCart } from "@/store/cart";
 import { useIsMounted } from "@/hooks/use-is-mounted";
+import Image from "next/image";
 import { formatCLP } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -80,7 +81,7 @@ export function Header() {
   }, [cartCount, mounted]);
   useEffect(() => {
     prevCartRef.current = cartCount;
-  }, [mounted]);
+  }, [mounted, cartCount]);
   const { theme, setTheme } = useTheme();
   const { data: session } = useSession();
 
@@ -195,7 +196,7 @@ export function Header() {
                         className="flex items-center gap-3 p-3 hover:bg-zinc-50 dark:hover:bg-zinc-800 border-b last:border-0 dark:border-zinc-700"
                         onClick={() => setShowAutocomplete(false)}
                       >
-                        <img src={p.images[0]} alt={p.name} className="h-10 w-10 object-cover rounded border" />
+                        <Image src={p.images[0]} alt={p.name} width={40} height={40} className="h-10 w-10 object-cover rounded border" />
                         <div className="flex-1 min-w-0">
                           <div className="text-sm font-medium line-clamp-1">{p.name}</div>
                           <div className="text-xs text-zinc-500 dark:text-zinc-400">{p.brand} • {p.sku}</div>
@@ -371,7 +372,7 @@ export function Header() {
                       className="flex items-center gap-3 p-3 hover:bg-zinc-50 dark:hover:bg-zinc-800 border-b last:border-0 dark:border-zinc-700"
                       onClick={() => setShowAutocomplete(false)}
                     >
-                      <img src={p.images[0]} alt={p.name} className="h-10 w-10 object-cover rounded border" />
+                      <Image src={p.images[0]} alt={p.name} width={40} height={40} className="h-10 w-10 object-cover rounded border" />
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium line-clamp-1">{p.name}</div>
                         <div className="text-xs text-zinc-500 dark:text-zinc-400">{p.brand} • {p.sku}</div>
@@ -520,7 +521,7 @@ export function Header() {
                       className="flex items-center gap-3 p-3 hover:bg-zinc-50 dark:hover:bg-zinc-800 border-b last:border-0 dark:border-zinc-700"
                       onClick={() => setShowAutocomplete(false)}
                     >
-                      <img src={p.images[0]} alt={p.name} className="h-10 w-10 object-cover rounded border" />
+                      <Image src={p.images[0]} alt={p.name} width={40} height={40} className="h-10 w-10 object-cover rounded border" />
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium line-clamp-1">{p.name}</div>
                         <div className="text-xs text-zinc-500 dark:text-zinc-400">{p.brand} • {p.sku}</div>

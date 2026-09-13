@@ -213,7 +213,7 @@ const EXTRA_PRODUCTS: Product[] = [
   makeProduct({ id: "p026", categoryId: "iluminacion-led-neon", subcategory: "Drivers & Transformadores", name: "Driver LED 12V 100W IP67 Ultra Slim", brand: "Mean Well", price: 15990, images: img(2) }),
   // Tubos & Lámparas Especiales
   makeProduct({ id: "p027", categoryId: "tubos-lamparas-especiales", subcategory: "Tubos Germicidas UV-C", name: "Tubo Germicida UV-C 15W G13 50cm", brand: "Sanilux", price: 11990, originalPrice: 16990, images: ["/Tubo Germicida UV-C 15W G13 50cm.png", "/Tubo Germicida UV-C 15W G13 50cm.png"], isFeatured: true }),
-  makeProduct({ id: "p028", categoryId: "tubos-lamparas-especiales", subcategory: "Lámparas Atrapa Mosquitos", name: "Lámpara Atrapa Mosquitos 20W USB", brand: "BugOff", price: 8990, images: img(4) }),
+  makeProduct({ id: "p028", categoryId: "tubos-lamparas-especiales", subcategory: "Lámparas Atrapa Mosquitos", name: "Lámpara Atrapa Mosquitos 20W USB", brand: "BugOff", price: 8990, images: ["/Lampara Atrapa Mosquitos UV 20W 80m2 Bandeja Cadena Exterior.png", IMG[4]] }),
   makeProduct({ id: "p029", categoryId: "tubos-lamparas-especiales", subcategory: "Halógenas & HMI", name: "Lámpara Halógena HMI 575W Fresnel", brand: "StudioLite", price: 28990, images: img(5) }),
   makeProduct({ id: "p030", categoryId: "tubos-lamparas-especiales", subcategory: "Lámparas Infrarrojas", name: "Lámpara Infrarroja 250W Tapa Cerámica", brand: "Thermo", price: 9990, images: ["/Lampara Infrarroja 250W Tapa Ceramica.png", "/Lampara Infrarroja 250W Tapa Ceramica.png"] }),
   // Seguridad & Control Eléctrico
@@ -660,7 +660,7 @@ export const products: Product[] = [
     categoryId: "instrumentos-medicion",
     subcategory: "Pirómetros Infrarrojos",
     brand: "UNI-T",
-    images: ["https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=600&h=600&fit=crop"],
+    images: ["/Pirometro Infrarrojo UNI-T UT300S -32 a 400C Laser Emisividad Ajustable.png"],
     price: 24990,
     originalPrice: 35990,
     discount: 31,

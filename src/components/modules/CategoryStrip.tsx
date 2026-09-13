@@ -1,5 +1,6 @@
 import { superCategories } from "@/lib/mock-data";
 import Link from "next/link";
+import Image from "next/image";
 import { Stagger, StaggerItem } from "@/components/ui/reveal";
 import { Lightbulb, Wrench, Gauge, Zap, BatteryCharging, ShieldCheck, Cpu, LucideProps } from "lucide-react";
 
@@ -38,9 +39,11 @@ export function CategoryStrip() {
               <StaggerItem key={cat.id}>
                 <Link href={`/categoria/${cat.slug}`} className="group text-center block transition-transform duration-200 hover:-translate-y-1">
                   <div className="aspect-[2/3] rounded-xl overflow-hidden bg-zinc-50 border group-hover:shadow-md transition relative">
-                    <img
+                    <Image
                       src={CAT_IMAGE_MAP[cat.id] ?? cat.image}
                       alt={cat.name}
+                      width={600}
+                      height={900}
                       className="absolute inset-0 h-full w-full object-cover group-hover:scale-105 transition duration-300"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/35 to-black/15" />

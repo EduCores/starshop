@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import { products } from "@/lib/mock-data";
 import { useCountdown } from "@/hooks/use-countdown";
 import { formatCLP } from "@/lib/utils";
+import Image from "next/image";
 import { Flame, ChevronRight } from "lucide-react";
 import { useCart } from "@/store/cart";
 import { Button } from "@/components/ui/button";
@@ -80,7 +81,7 @@ export function FlashSale() {
             return (
               <Link key={p.id} href={`/producto/${p.id}`} className="border rounded-lg overflow-hidden hover:shadow-lg transition group bg-white dark:bg-zinc-900 block">
                 <div className="relative aspect-square bg-zinc-50 overflow-hidden">
-                  <img src={p.images[0]} alt={p.name} className="h-full w-full object-cover group-hover:scale-105 transition duration-300" />
+                  <Image src={p.images[0]} alt={p.name} width={600} height={600} className="h-full w-full object-cover group-hover:scale-105 transition duration-300" />
                   {p.discount && (
                     <span className="absolute top-2 left-2 bg-[#FF3B30] text-white text-xs font-black px-1.5 py-0.5 rounded">-{p.discount}%</span>
                   )}

@@ -47,6 +47,11 @@ export function FloatingButtons() {
     }, 28);
   };
 
+  // Ref estable: permite usar typeAgentMessage dentro de efectos sin depender
+  // de la identidad de la función (que cambia en cada render).
+  const typeAgentMessageRef = useRef(typeAgentMessage);
+  typeAgentMessageRef.current = typeAgentMessage;
+
   // Voz: solo cloud (ElevenLabs/OpenAI/Edge/Google) — botón silencia real
   const speak = async (text: string, id?: number) => {
     try {
@@ -183,7 +188,7 @@ export function FloatingButtons() {
       setAgentPulse((k) => k + 1);
       setTimeout(() => {
         setAgentTyping(false);
-        typeAgentMessage(`¡Genial! Quieres cotizar "${pendingProduct}". ¿Me cuentas cuántas unidades necesitas y si es para empresa? ¿RUT y comuna para calcular despacho?`);
+        typeAgentMessageRef.current(`¡Genial! Quieres cotizar "${pendingProduct}". ¿Me cuentas cuántas unidades necesitas y si es para empresa? ¿RUT y comuna para calcular despacho?`);
         setPendingProduct(null);
       }, 700);
     }

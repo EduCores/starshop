@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { blogPosts } from "@/lib/blog-mock";
 
 export const metadata: Metadata = {
@@ -16,7 +17,7 @@ export default function BlogPage() {
       <div className="grid md:grid-cols-3 gap-4 mt-6">
         {blogPosts.map((p) => (
           <Link key={p.slug} href={`/blog/${p.slug}`} className="border rounded-lg overflow-hidden bg-white dark:bg-zinc-900 hover:shadow-lg transition block">
-            <img src={p.image} alt={p.title} className="h-40 w-full object-cover bg-zinc-50" />
+            <Image src={p.image} alt={p.title} width={800} height={400} className="h-40 w-full object-cover bg-zinc-50" />
             <div className="p-4">
               <div className="text-xs text-zinc-500">{p.date} • {p.author}</div>
               <h2 className="font-bold leading-tight mt-1 line-clamp-2">{p.title}</h2>

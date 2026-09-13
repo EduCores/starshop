@@ -17,6 +17,10 @@ data/orders.json
 # Salida de graphify (grafo de conocimiento, regenerable con /draw)
 graphify-out/
 
+# Artefactos de tests e2e (Playwright)
+test-results/
+playwright-report/
+
 # Logs de servidor de pruebas
 start-*.log
 

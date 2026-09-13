@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { heroSlides } from "@/lib/mock-data";
 import { ChevronLeft, ChevronRight, Award, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 
 export function HeroSection() {
@@ -28,7 +29,7 @@ export function HeroSection() {
             transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
             className="absolute inset-0"
           >
-            <img src={slide.image} alt={slide.title} className="absolute inset-0 h-full w-full object-cover opacity-60" />
+            <Image src={slide.image} alt={slide.title} width={1200} height={800} priority={current === 0} className="absolute inset-0 h-full w-full object-cover opacity-60" />
             <div className={`absolute inset-0 bg-gradient-to-r ${slide.bg} opacity-80 mix-blend-multiply`} />
             <div className="relative h-full flex flex-col justify-center p-6 md:p-10 text-white max-w-xl">
               <span className="animate-floaty inline-block bg-white/20 backdrop-blur text-xs font-bold px-2 py-1 rounded w-fit mb-3">🔥 OFERTA LIMITADA</span>

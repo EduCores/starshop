@@ -1,5 +1,6 @@
 "use client";
 import { useCart } from "@/store/cart";
+import Image from "next/image";
 import { useIsMounted } from "@/hooks/use-is-mounted";
 import { formatCLP } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -74,7 +75,7 @@ export function CartDrawer() {
             <div className="divide-y">
               {items.map(({ product, quantity }) => (
                 <div key={product.id} className="p-4 flex gap-3">
-                  <img src={product.images[0]} alt={product.name} className="h-20 w-20 object-cover rounded border bg-white" />
+                  <Image src={product.images[0]} alt={product.name} width={80} height={80} className="h-20 w-20 object-cover rounded border bg-white" />
                   <div className="flex-1 min-w-0">
                     <Link href="#" className="text-sm font-medium line-clamp-2 hover:text-[#FF3B30] leading-tight">
                       {product.name}
