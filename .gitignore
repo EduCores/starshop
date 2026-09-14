@@ -26,3 +26,7 @@ start-*.log
 
 # Script de debug temporal
 debug-zonas.mjs
+
+# Logs de build local y config del editor
+build-*.log
+.vscode/
