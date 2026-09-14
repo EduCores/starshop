@@ -1,0 +1,162 @@
+// STARSHOP — Prisma sobre el MISMO Postgres de Supabase.
+// Alternativa a supabase-js: mismo modelo que supabase/schema.sql.
+// DATABASE_URL (puerto 6543 pgbouncer) + DIRECT_URL (puerto 5432).
+// El build de Vercel NO ejecuta prisma (build = "next build").
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// 1) Empresa / tenant (slug = storeId en ACS)
+model Tenant {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug      String    @unique
+  name      String
+  domain    String?   @unique
+  brand     Json      @default("{}") @db.JsonB
+  plan      String    @default("starter")
+  active    Boolean   @default(true)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  branches  Branch[]
+  profiles  Profile[]
+  products  Product[]
+  stocks    Stock[]
+  orders    Order[]
+  posts     Post[]
+
+  @@map("tenants")
+}
+
+// 2) Sucursales: stock y retiro por sucursal
+model Branch {
+  id       String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId String   @map("tenant_id") @db.Uuid
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name     String
+  address  String?
+  region   String?
+  comuna   String?
+  phone    String?
+  isPickup Boolean  @default(true) @map("is_pickup")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  stocks   Stock[]
+  profiles Profile[]
+
+  @@map("branches")
+}
+
+// Staff del tenant (id = auth.users.id de Supabase Auth)
+model Profile {
+  id        String   @id @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branchId  String?  @map("branch_id") @db.Uuid
+  branch    Branch?  @relation(fields: [branchId], references: [id])
+  role      String   @default("staff")
+  fullName  String?  @map("full_name")
+  rut       String?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("profiles")
+}
+
+
+// 4) Catalogo por tenant (+ stock por sucursal)
+model Product {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId         String   @map("tenant_id") @db.Uuid
+  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sku              String
+  name             String
+  slug             String?
+  description      String?
+  shortDescription String?  @map("short_description")
+  brand            String?
+  categoryId       String?  @map("category_id")
+  subcategory      String?
+  price            Int
+  originalPrice    Int?     @map("original_price")
+  discount         Int?
+  images           String[] @default([])
+  specs            Json     @default("{}") @db.JsonB
+  tags             String[] @default([])
+  secCertified     Boolean  @default(false) @map("sec_certified")
+  warranty         String?
+  tierPrices       Json     @default("[]") @map("tier_prices") @db.JsonB
+  rating           Decimal  @default(4.5) @db.Decimal(2, 1)
+  reviewCount      Int      @default(0) @map("review_count")
+  soldCount        Int      @default(0) @map("sold_count")
+  isFlashSale      Boolean  @default(false) @map("is_flash_sale")
+  isB2B            Boolean  @default(false) @map("is_b2b")
+  isFeatured       Boolean  @default(false) @map("is_featured")
+  isBestSeller     Boolean  @default(false) @map("is_best_seller")
+  active           Boolean  @default(true)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  stocks           Stock[]
+
+  @@unique([tenantId, sku])
+  @@index([tenantId])
+  @@map("products")
+}
+
+// 5) Stock por sucursal
+model Stock {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branchId  String   @map("branch_id") @db.Uuid
+  branch    Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  productId String   @map("product_id") @db.Uuid
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  qty       Int      @default(0)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([branchId, productId])
+  @@index([tenantId])
+  @@map("stock")
+}
+
+// 6) Ordenes por tenant (equivale a data/orders.json; la escribe el checkout
+// server-side con service role, bypass RLS)
+model Order {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  orderId       String   @map("order_id")
+  customer      Json     @db.JsonB
+  items         Json     @db.JsonB
+  subtotal      Int
+  shippingCost  Int      @default(0) @map("shipping_cost")
+  grandTotal    Int      @map("grand_total")
+  paymentMethod String   @map("payment_method")
+  paymentStatus String   @default("pending") @map("payment_status")
+  gatewayRef    String?  @map("gateway_ref")
+  region        String?
+  comuna        String?
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([tenantId])
+  @@map("orders")
+}
+
+// 7) Automatizacion RRSS (draft -> scheduled -> published)
+model Post {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  platform    String
+  content     String
+  mediaUrls   String[]  @default([]) @map("media_urls")
+  scheduledAt DateTime? @map("scheduled_at") @db.Timestamptz(6)
+  status      String    @default("draft")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([tenantId])
+  @@map("posts")
+}

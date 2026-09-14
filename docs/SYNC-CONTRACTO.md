@@ -33,16 +33,24 @@ Respuesta mínima por producto: `externalId|id`, `sku`, `title|name`,
   verdad); ACS solo reindexa. El checkout nunca lee de ACS.
 - Frecuencia sugerida: sync manual al publicar catálogo + cron diario por tienda.
 
-## 4. Cambios pendientes del lado ACS (repo `agentic-commerce-stack`)
+## 4. Cambios del lado ACS (repo `agentic-commerce-stack`) — ESTADO
 
-1. **Filtro por `storeId` en la búsqueda** (único cambio de código obligatorio):
-   la tool de búsqueda hoy es global; debe filtrar por tienda para no recomendar
-   productos de otro cliente.
-2. **Sync por tienda**: script `acs:sync --store=<slug>` que lea
-   `GET <tienda>/api/tenant/catalog?tenant=<slug>` y haga upsert en
-   `StoreConnection` + `Product` (reutilizar `diagnose-stores` / `test-search`).
-3. **CORS por cliente**: agregar el dominio de cada ferretería a
-   `ALLOWED_ORIGINS` (solo env, sin código).
+1. ✅ **HECHO — Sync por tenant**: `POST /api/store/sync` con
+   `provider:"starshop"` ahora llama `fetchTenantCatalog(storeId)` →
+   `GET <tienda>/api/tenant/catalog?tenant=<slug>` (normalizador
+   `normalizeTenantProduct` en `src/lib/starshop.ts`). El upsert idempotente
+   por `(storeId, sku)` preserva `reservedStock` local.
+2. ✅ **NO REQUERIDO — filtro por tienda en la búsqueda**: verificado en
+   `agent/tools/search-products.ts`: la tool **sí filtra por tienda**
+   (`adapter.listProducts(sid)` sobre la copia de ese `storeId`; default
+   `seed-store`). El aislamiento viene del sync por tenant: cada tienda solo
+   tiene sus productos en ACS. Lo anterior despeja el riesgo de recomendar
+   productos de otra ferretería.
+3. ⬜ **CORS por cliente (operativo, sin código)**: agregar el dominio de cada
+   ferretería a `ALLOWED_ORIGINS` en el deploy de ACS (ver `chat-guard.ts`).
+   En local, `NEXT_PUBLIC_ACS_API_URL=http://localhost:3002` y StarShop corre
+   en `localhost:3000` → agregar `http://localhost:3000` a `ALLOWED_ORIGINS`
+   para probar el widget contra ACS local.
 
 ## 5. Onboarding de un cliente nuevo (checklist)
 

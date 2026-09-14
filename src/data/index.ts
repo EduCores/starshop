@@ -1,6 +1,8 @@
-import type { DataProvider } from "./provider";
+import type { DataProvider, OrderStatus, OrderSaveOptions, StoredOrder, TenantContext } from "./provider";
+import type { Order, Product } from "@/types";
 import { localProvider } from "./local";
 import { createSupabaseProvider } from "./supabase";
+import { createPrismaProvider } from "./prisma-provider";
 
 /**
  * Fábrica de providers: la app habla SIEMPRE con `db` (esta interfaz),
@@ -10,6 +12,8 @@ import { createSupabaseProvider } from "./supabase";
  *
  *   DATA_PROVIDER=local     (default; demo sin infraestructura)
  *   DATA_PROVIDER=supabase  (requiere SUPABASE_URL + SERVICE KEY + TENANT)
+ *   DATA_PROVIDER=prisma    (requiere DATABASE_URL + DIRECT_URL + TENANT;
+ *                            mismo Postgres de Supabase vía Prisma Client)
  */
 export function resolveProvider(): DataProvider {
   const name = (process.env.DATA_PROVIDER ?? "local").toLowerCase();
@@ -22,9 +26,15 @@ export function resolveProvider(): DataProvider {
     }
     return createSupabaseProvider(url, key, tenant);
   }
+  if (name === "prisma") {
+    const tenant = process.env.STARSHOP_TENANT_ID;
+    if (!process.env.DATABASE_URL || !tenant) {
+      throw new Error("DATA_PROVIDER=prisma requiere DATABASE_URL y STARSHOP_TENANT_ID (DIRECT_URL solo para migraciones)");
+    }
+    return createPrismaProvider(tenant);
+  }
   return localProvider;
 }
-
 /** Provider único de la aplicación (lazy: no choca si falta env local). */
 let _db: DataProvider | null = null;
 export function getDb(): DataProvider {
@@ -47,5 +57,5 @@ export const db: DataProvider = new Proxy({} as DataProvider, {
     return typeof value === "function" ? (value as (...a: never[]) => unknown).bind(real) : value;
   },
 });
-export { localProvider, createSupabaseProvider };
+export { localProvider, createSupabaseProvider, createPrismaProvider };
 export type { DataProvider, OrderStatus, StoredOrder, TenantContext } from "./provider";

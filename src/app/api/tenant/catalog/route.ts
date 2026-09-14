@@ -52,6 +52,7 @@ export async function GET(req: NextRequest) {
         isB2B: p.isB2B,
         tierPrices: p.tierPrices,
         tags: p.tags,
+        url: `/producto/${p.id}`,
       })),
     });
   } catch (err: unknown) {

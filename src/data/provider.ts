@@ -6,7 +6,7 @@ import type { Order, Product } from "@/types";
  * solo estas interfaces y las que están en @/types.
  */
 
-export type DataProviderName = "local" | "supabase";
+export type DataProviderName = "local" | "supabase" | "prisma";
 
 export type OrderStatus = "pending" | "approved" | "rejected" | "failed";
 
