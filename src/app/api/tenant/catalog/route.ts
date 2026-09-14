@@ -56,8 +56,20 @@ export async function GET(req: NextRequest) {
       })),
     });
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "Error leyendo el catálogo del tenant";
-    console.error("[tenant/catalog] ", msg);
-    return NextResponse.json({ error: msg }, { status: 503 });
+    // Diagnóstico: los errores de Supabase (PostgrestError) NO son instancias
+    // de Error, así que serializamos todo + qué env vars existen (sin valores).
+    const msg = err instanceof Error
+      ? err.message
+      : typeof err === "object" && err !== null
+        ? JSON.stringify(err)
+        : String(err);
+    const envCheck = {
+      DATA_PROVIDER: !!process.env.DATA_PROVIDER,
+      SUPABASE_URL: !!process.env.SUPABASE_URL,
+      SUPABASE_SERVICE_ROLE_KEY: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      STARSHOP_TENANT_ID: process.env.STARSHOP_TENANT_ID ?? null,
+    };
+    console.error("[tenant/catalog] ", msg, JSON.stringify(envCheck));
+    return NextResponse.json({ error: msg, envCheck }, { status: 503 });
   }
 }
