@@ -31,3 +31,5 @@ debug-zonas.mjs
 build-*.log
 build-log.txt
 .vscode/
+dev-log.txt
+
