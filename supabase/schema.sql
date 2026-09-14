@@ -56,6 +56,31 @@ create table products (
   description        text,
   short_description  text,
   brand              text,
+  category_id        text,
+  subcategory        text,
+  price              integer not null check (price >= 0),
+  original_price     integer check (original_price >= 0),
+  discount           integer,
+  images             text[] not null default '{}',
+  specs              jsonb not null default '{}',
+  tags               text[] not null default '{}',
+  sec_certified      boolean not null default false,
+  warranty           text,
+  tier_prices        jsonb not null default '[]',
+  rating             numeric(2,1) not null default 4.5,
+  review_count       integer not null default 0,
+  sold_count         integer not null default 0,
+  is_flash_sale      boolean not null default false,
+  is_b2b             boolean not null default false,
+  is_featured        boolean not null default false,
+  is_best_seller     boolean not null default false,
+  active             boolean not null default true,
+  created_at         timestamptz not null default now(),
+  unique (tenant_id, sku)
+);
+create index idx_products_tenant on products(tenant_id);
+create index idx_products_tenant_cat on products(tenant_id, category_id);
+
 -- 5) STOCK POR SUCURSAL (inventario multi-branch)
 create table stock (
   tenant_id  uuid not null references tenants(id) on delete cascade,
@@ -104,33 +129,17 @@ create table posts (
 );
 
 -- ============================================================
--- VISIÓN ÚTIL: catálogo con stock agregado por tenant
+-- VISTA UTIL: catalogo con stock agregado por tenant
 -- ============================================================
 create or replace view catalog_with_stock as
 select p.*,
-       jsonb_object_agg(s.branch_id, s.qty) as stock_by_branch,
-       coalesce(sum(s.qty), 0)              as total_stock
+       coalesce(sum(s.qty), 0) as total_stock
 from products p
 left join stock s on s.product_id = p.id
 group by p.id;
-  category_id        text,
-  subcategory        text,
-  price              integer not null check (price >= 0),
-  original_price     integer check (original_price >= 0),
-  discount           integer,
-  images             text[] not null default '{}',
-  specs              jsonb not null default '{}',
-  tags               text[] not null default '{}',
-  sec_certified      boolean not null default false,
-  warranty           text,
-  tier_prices        jsonb not null default '[]',
-  rating             numeric(2,1) not null default 4.5,
-  review_count       integer not null default 0,
-  sold_count         integer not null default 0,
-  is_flash_sale      boolean not null default false,
-  is_b2b             boolean not null default false,
+
 -- ============================================================
--- ROW LEVEL SECURITY — el aislamiento entre ANSES / clientes
+-- ROW LEVEL SECURITY — el aislamiento entre tenants / clientes
 -- Regla: solo los usuarios cuyo profile pertenece al tenant pueden
 -- ver/escribir sus datos. owner/admin pueden escribir; staff lee.
 -- ============================================================
@@ -231,11 +240,3 @@ create policy "posts_write_tenant"
 -- insert into tenants (slug, name, domain) values ('ferreteria-martinez', 'Ferretería Martínez', 'ferreteriamartinez.cl');
 -- insert into branches (tenant_id, name, region, comuna, is_pickup)
 --   select id, 'Sucursal Centro', 'RM', 'Santiago', true from tenants where slug = 'ferreteria-martinez';
-  is_featured        boolean not null default false,
-  is_best_seller     boolean not null default false,
-  active             boolean not null default true,
-  created_at         timestamptz not null default now(),
-  unique (tenant_id, sku)
-);
-create index idx_products_tenant on products(tenant_id);
-create index idx_products_tenant_cat on products(tenant_id, category_id);

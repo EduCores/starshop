@@ -1,6 +1,6 @@
 import type { DataProvider, OrderStatus, OrderSaveOptions, StoredOrder, TenantContext } from "./provider";
 import type { Order, Product } from "@/types";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 /**
  * Adaptador SUPABASE — proveedor multi-tenant (white-label por cliente).
@@ -19,21 +19,23 @@ export function createSupabaseProvider(url: string, serviceKey: string, tenantId
     name: "supabase",
 
     catalog: {
-      list: async (_tenant: TenantContext) => {
+      list: async (ctx: TenantContext) => {
+        const tid = await resolveTenantId(client, tenantId, ctx.tenantId);
         const { data, error } = await client
           .from("products")
           .select("*")
-          .eq("tenant_id", tenantId)
+          .eq("tenant_id", tid)
           .eq("active", true)
           .order("is_featured", { ascending: false });
         if (error) throw error;
         return (data ?? []).map(mapProduct);
       },
-      get: async (_tenant: TenantContext, id: string) => {
+      get: async (ctx: TenantContext, id: string) => {
+        const tid = await resolveTenantId(client, tenantId, ctx.tenantId);
         const { data, error } = await client
           .from("products")
           .select("*")
-          .eq("tenant_id", tenantId)
+          .eq("tenant_id", tid)
           .eq("id", id)
           .maybeSingle();
         if (error) throw error;
@@ -43,10 +45,11 @@ export function createSupabaseProvider(url: string, serviceKey: string, tenantId
 
     orders: {
       save: async (order: Order, opts?: OrderSaveOptions): Promise<StoredOrder> => {
+        const tid = await resolveTenantId(client, tenantId);
         const { data, error } = await client
           .from("orders")
           .insert({
-            tenant_id: tenantId,
+            tenant_id: tid,
             order_id: order.orderId,
             customer: order.customer,
             items: order.items,
@@ -65,31 +68,34 @@ export function createSupabaseProvider(url: string, serviceKey: string, tenantId
         return mapOrder(data);
       },
       findById: async (orderId: string): Promise<StoredOrder | undefined> => {
+        const tid = await resolveTenantId(client, tenantId);
         const norm = orderId.startsWith("#") ? orderId : `#${orderId}`;
         const { data, error } = await client
           .from("orders")
           .select("*")
-          .eq("tenant_id", tenantId)
+          .eq("tenant_id", tid)
           .in("order_id", [orderId, norm])
           .maybeSingle();
         if (error) throw error;
         return data ? mapOrder(data) : undefined;
       },
       findByExternalRef: async (ref: string): Promise<StoredOrder | undefined> => {
+        const tid = await resolveTenantId(client, tenantId);
         const { data, error } = await client
           .from("orders")
           .select("*")
-          .eq("tenant_id", tenantId)
+          .eq("tenant_id", tid)
           .eq("gateway_ref", ref)
           .maybeSingle();
         if (error) throw error;
         return data ? mapOrder(data) : undefined;
       },
       updateStatus: async (orderId: string, status: OrderStatus): Promise<StoredOrder | undefined> => {
+        const tid = await resolveTenantId(client, tenantId);
         const { data, error } = await client
           .from("orders")
           .update({ payment_status: status })
-          .eq("tenant_id", tenantId)
+          .eq("tenant_id", tid)
           .eq("order_id", orderId)
           .select()
           .maybeSingle();
@@ -97,16 +103,38 @@ export function createSupabaseProvider(url: string, serviceKey: string, tenantId
         return data ? mapOrder(data) : undefined;
       },
       count: async (): Promise<number> => {
+        const tid = await resolveTenantId(client, tenantId);
         const { count, error } = await client
           .from("orders")
           .select("id", { count: "exact", head: true })
-          .eq("tenant_id", tenantId);
+          .eq("tenant_id", tid);
         if (error) throw error;
         return count ?? 0;
       },
     },
   };
 }
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Resuelve el tenant pedido (?tenant= o STARSHOP_TENANT_ID) a su uuid.
+ * Acepta uuid directo o slug (busca en `tenants`). "local" cae al default.
+ * Sin esto, un STARSHOP_TENANT_ID con slug romperia el filtro/FK (uuid).
+ */
+async function resolveTenantId(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  client: SupabaseClient<any>,
+  defaultTenant: string,
+  requested?: string,
+): Promise<string> {
+  const want = requested && requested !== "local" ? requested : defaultTenant;
+  if (UUID_RE.test(want)) return want;
+  const { data, error } = await client.from("tenants").select("id").eq("slug", want).maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error(`Tenant desconocido: "${want}" (no existe ese slug en public.tenants)`);
+  return String((data as { id: string }).id);
+}
+
 /** Fila `products` (o vista catalog_with_stock) -> dominio Product. */
 function mapProduct(row: Record<string, unknown>): Product {
   return {

@@ -52,10 +52,23 @@ Extras: vista `catalog_with_stock`, helpers `current_tenant_id()` /
 
 Siempre igual: **sin tocar UI, checkout ni compuertas de pago.**
 
-## 4. En el primer cliente
+## 4. Del mock a la DB de prueba (mock → Supabase, sin romper la demo)
 
 1. `npm i @supabase/supabase-js` (ya instalado)
 2. Crear proyecto Supabase → correr `supabase/schema.sql` en el SQL editor
-3. Insertar `tenants` + `branches` + crear usuarios en Supabase Auth/Settings → `profiles`
-4. En el deploy: `DATA_PROVIDER=supabase` + `SUPABASE_URL` + service key + `STARSHOP_TENANT_ID`
-5. Seed: importar catálogo (existe `scripts/generate-excel.mjs` + CSV) o usar el panel (Supabase Studio) — los productos del cliente se gestionan ahí, sin tocar código
+   (7 tablas + RLS + vista `catalog_with_stock`; validado con
+   `python scripts/validate_schema.py`)
+3. Generar el seed del catálogo demo:
+   `npx tsx scripts/seed-catalog.ts seed-store` → produce
+   `supabase/seed-catalog.sql` (tenant + 2 sucursales + 49 productos con
+   `on conflict` idempotente) → pegarlo en el SQL editor
+4. Insertar `tenants` + `branches` reales del cliente + crear usuarios en
+   Supabase Auth/Settings → `profiles`
+5. En el deploy: `DATA_PROVIDER=supabase` + `SUPABASE_URL` + service key +
+   `STARSHOP_TENANT_ID=<slug>` (+ `NEXT_PUBLIC_STARSHOP_TENANT_ID=<slug>`
+   para que el widget mande ese `storeId` al cerebro)
+6. Con `DATA_PROVIDER=local` (default) todo sigue funcionando sin infra:
+   el checkout, `/api/store/products` y `/api/tenant/catalog` leen mock-data.
+
+Puente con ACS: ver `docs/SYNC-CONTRACTO.md` (contrato `(storeId, sku)`,
+endpoints por tenant y checklist de onboarding).

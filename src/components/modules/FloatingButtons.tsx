@@ -98,6 +98,9 @@ export function FloatingButtons() {
   }, [agentMessages, agentTyping]);
 
   const ACS_URL = process.env.NEXT_PUBLIC_ACS_API_URL ?? "https://agentic-commerce-stack.vercel.app";
+  // Identidad del tenant: el cerebro (ACS) usa `storeId` para aislar catalogos por cliente.
+  // Cada deploy white-label define NEXT_PUBLIC_STARSHOP_TENANT_ID (ej: "ferreteria-martinez").
+  const STORE_ID = process.env.NEXT_PUBLIC_STARSHOP_TENANT_ID ?? "seed-store";
 
   const getProductPath = (input: string): string | null => {
     const t = input.toLowerCase().trim();
@@ -158,7 +161,7 @@ export function FloatingButtons() {
       const r = await fetch(`${ACS_URL}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: input, history: historySlice, agentSlug: "sales-assistant", storeId: "seed-store" }),
+        body: JSON.stringify({ message: input, history: historySlice, agentSlug: "sales-assistant", storeId: STORE_ID }),
       });
       const data = await r.json();
       const calls = data.toolCalls ?? [];
