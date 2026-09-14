@@ -28,10 +28,24 @@ export function resolveProvider(): DataProvider {
 /** Provider único de la aplicación (lazy: no choca si falta env local). */
 let _db: DataProvider | null = null;
 export function getDb(): DataProvider {
+  // En build estático de Next (generateStaticParams / collect page data) no hay
+  // env de runtime todavía: devolver el provider local es seguro porque esas
+  // páginas solo leen el catálogo (mock-data), nunca escriben órdenes.
+  // En runtime (dev/serverless) se resuelve el provider real una sola vez.
+  if (typeof process !== "undefined" && process.env.NEXT_PHASE === "phase-production-build" && !_db) {
+    return localProvider;
+  }
   if (!_db) _db = resolveProvider();
   return _db;
 }
 
-export const db = getDb();
+/** Proxy perezoso: `db` nunca resuelve el provider en import-time (build-safe). */
+export const db: DataProvider = new Proxy({} as DataProvider, {
+  get(_target, prop: keyof DataProvider) {
+    const real = getDb() as unknown as Record<string, unknown>;
+    const value = real[prop as string];
+    return typeof value === "function" ? (value as (...a: never[]) => unknown).bind(real) : value;
+  },
+});
 export { localProvider, createSupabaseProvider };
 export type { DataProvider, OrderStatus, StoredOrder, TenantContext } from "./provider";

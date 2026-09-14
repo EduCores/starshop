@@ -122,8 +122,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
  * Sin esto, un STARSHOP_TENANT_ID con slug romperia el filtro/FK (uuid).
  */
 async function resolveTenantId(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  client: SupabaseClient<any>,
+  client: SupabaseClient,
   defaultTenant: string,
   requested?: string,
 ): Promise<string> {
