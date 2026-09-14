@@ -98,6 +98,24 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   abasteciendo a contratistas e industrias.
                 </p>
                 <p className="mt-3">© 2026 Starshop SpA. Todos los derechos reservados.</p>
+                <h4 className="text-base font-bold mt-6 mb-3 flex items-center gap-2">
+                  <Clock className="h-6 w-6 shrink-0 text-[#FFD814]" />
+                  Horario Atención
+                </h4>
+                <ul className="space-y-3 text-base text-zinc-300">
+                  <li className="flex items-center gap-3">
+                    <span>Lun - Jue</span>
+                    <span className="text-white font-medium">10:00 - 18:00h</span>
+                  </li>
+                  <li className="flex items-center gap-3">
+                    <span>Vie</span>
+                    <span className="text-white font-medium">10:00 - 16:00h</span>
+                  </li>
+                  <li className="flex items-center gap-3">
+                    <span>Sáb - Dom</span>
+                    <span>Cerrado</span>
+                  </li>
+                </ul>
               </div>
 
               {/* Ayuda + Categorías */}
@@ -123,28 +141,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                       <span>Blog (guías demo)</span>
                     </Link>
                   </li>
-                  <li>
-                    <Link href="/workflows/builder" className="flex items-center gap-3 hover:text-white hover:underline">
-                      <FileText className="h-6 w-6 shrink-0 text-[#FFD814]" />
-                      <span>Builder visual (demo)</span>
-                    </Link>
-                  </li>
-                </ul>
-                <h5 className="text-base font-bold mt-5 mb-3">Categorías</h5>
-                <ul className="space-y-3 text-base text-zinc-300">
-                  {[
-                    { Icon: Lightbulb, label: "Iluminación LED" },
-                    { Icon: Wrench, label: "Herramientas" },
-                    { Icon: Ruler, label: "Instrumentos de Medición" },
-                    { Icon: ShieldAlert, label: "Seguridad Eléctrica" },
-                  ].map(({ Icon, label }) => (
-                    <li key={label}>
-                      <a href="#" className="flex items-center gap-3 hover:text-white hover:underline">
-                        <Icon className="h-6 w-6 shrink-0 text-[#FFD814]" />
-                        <span>{label}</span>
-                      </a>
-                    </li>
-                  ))}
                 </ul>
               </div>
 
@@ -188,25 +184,23 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 </ul>
               </div>
 
-              {/* Horario */}
+              {/* Categorías */}
               <div>
-                <h4 className="text-base font-bold mb-3 flex items-center gap-2">
-                  <Clock className="h-6 w-6 shrink-0 text-[#FFD814]" />
-                  Horario Atención
-                </h4>
+                <h4 className="text-base font-bold mb-3">Categorías</h4>
                 <ul className="space-y-3 text-base text-zinc-300">
-                  <li className="flex items-center gap-3">
-                    <span>Lun - Jue</span>
-                    <span className="text-white font-medium">10:00 - 18:00h</span>
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <span>Vie</span>
-                    <span className="text-white font-medium">10:00 - 16:00h</span>
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <span>Sáb - Dom</span>
-                    <span>Cerrado</span>
-                  </li>
+                  {[
+                    { Icon: Lightbulb, label: "Iluminación LED" },
+                    { Icon: Wrench, label: "Herramientas" },
+                    { Icon: Ruler, label: "Instrumentos de Medición" },
+                    { Icon: ShieldAlert, label: "Seguridad Eléctrica" },
+                  ].map(({ Icon, label }) => (
+                    <li key={label}>
+                      <a href="#" className="flex items-center gap-3 hover:text-white hover:underline">
+                        <Icon className="h-6 w-6 shrink-0 text-[#FFD814]" />
+                        <span>{label}</span>
+                      </a>
+                    </li>
+                  ))}
                 </ul>
               </div>
             </div>
