@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { WebpayPlus, Options, IntegrationCommerceCodes, IntegrationApiKeys, Environment } from "transbank-sdk";
-import { findOrderByExternalRef, updateOrderStatus, OrderStatus } from "@/lib/orders";
+import { db } from "@/data";
+import type { OrderStatus } from "@/data";
 
 function getWebpayOptions() {
   const commerceCode = process.env.WEBPAY_COMMERCE_CODE || IntegrationCommerceCodes.WEBPAY_PLUS;
@@ -31,8 +32,8 @@ async function commitAndSync(token: string): Promise<WebpayCommitResponse> {
   try {
     const ref = commitResponse?.buy_order;
     if (ref) {
-      const order = findOrderByExternalRef(ref);
-      if (order) updateOrderStatus(order.orderId, statusFromCommit(commitResponse));
+      const order = await db.orders.findByExternalRef(ref);
+      if (order) await db.orders.updateStatus(order.orderId, statusFromCommit(commitResponse));
     }
   } catch (e) {
     console.warn("[WebPay commit] no se pudo actualizar la orden:", e);

@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { saveOrder, getAllOrders, findOrderById } from "@/lib/orders";
+import { db } from "@/data";
 import type { Order } from "@/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * POST /api/orders — persiste una orden en data/orders.json.
- * Se llama desde el checkout antes de redirigir a la pasarela, para que
- * la orden sobreviva al retorno de Webpay/MercadoPago (ya no depende solo
- * de sessionStorage).
+ * POST /api/orders — persiste una orden en el provider activo
+ * (DATA_PROVIDER=local -> data/orders.json; supabase -> tabla orders).
+ * Se llama desde el checkout antes de redirigir a la pasarela.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -17,7 +16,7 @@ export async function POST(req: NextRequest) {
     if (!order?.orderId || !Array.isArray(order.items) || typeof order.grandTotal !== "number") {
       return NextResponse.json({ error: "Orden inválida" }, { status: 400 });
     }
-    const stored = saveOrder(order as Order);
+    const stored = await db.orders.save(order as Order);
     return NextResponse.json({ ok: true, orderId: stored.orderId, status: stored.status });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Error guardando la orden";
@@ -33,9 +32,9 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   const orderId = new URL(req.url).searchParams.get("orderId");
   if (orderId) {
-    const order = findOrderById(orderId);
+    const order = await db.orders.findById(orderId);
     if (!order) return NextResponse.json({ error: "Orden no encontrada" }, { status: 404 });
     return NextResponse.json({ order });
   }
-  return NextResponse.json({ total: getAllOrders().length });
+  return NextResponse.json({ total: await db.orders.count() });
 }

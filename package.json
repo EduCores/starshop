@@ -12,6 +12,7 @@
     "@auth/prisma-adapter": "^2.11.3",
     "@hookform/resolvers": "^3.6.0",
     "@prisma/client": "^5.14.0",
+    "@supabase/supabase-js": "^2.109.0",
     "@tanstack/react-query": "^5.51.1",
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.0",

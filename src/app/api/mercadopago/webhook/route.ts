@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { MercadoPagoConfig, Payment } from "mercadopago";
-import { findOrderByExternalRef, updateOrderStatus, OrderStatus } from "@/lib/orders";
+import { db } from "@/data";
+import type { OrderStatus } from "@/data";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -46,8 +47,8 @@ export async function POST(req: NextRequest) {
 
       const ref = p.external_reference;
       if (ref) {
-        const order = findOrderByExternalRef(ref);
-        if (order) updateOrderStatus(order.orderId, mpStatusToOrderStatus(p.status));
+        const order = await db.orders.findByExternalRef(ref);
+        if (order) await db.orders.updateStatus(order.orderId, mpStatusToOrderStatus(p.status));
       }
     } else {
       // Sin access token (modo integración local): solo acuse de recibo.
