@@ -21,8 +21,10 @@ export function createSupabaseProvider(url: string, serviceKey: string, tenantId
     catalog: {
       list: async (ctx: TenantContext) => {
         const tid = await resolveTenantId(client, tenantId, ctx.tenantId);
+        // catalog_with_stock = vista products + total_stock (suma de sucursales);
+        // sin ella el stock llegaria siempre 0 al front.
         const { data, error } = await client
-          .from("products")
+          .from("catalog_with_stock")
           .select("*")
           .eq("tenant_id", tid)
           .eq("active", true)
@@ -33,7 +35,7 @@ export function createSupabaseProvider(url: string, serviceKey: string, tenantId
       get: async (ctx: TenantContext, id: string) => {
         const tid = await resolveTenantId(client, tenantId, ctx.tenantId);
         const { data, error } = await client
-          .from("products")
+          .from("catalog_with_stock")
           .select("*")
           .eq("tenant_id", tid)
           .eq("id", id)
